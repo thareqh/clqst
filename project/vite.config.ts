@@ -15,10 +15,12 @@ export default defineConfig({
   },
   build: {
     rollupOptions: {
-      external: ['@emailjs/browser'],
+      external: ['@emailjs/browser', '@heroicons/react/24/solid', '@heroicons/react/24/outline'],
       output: {
         globals: {
-          '@emailjs/browser': 'emailjs'
+          '@emailjs/browser': 'emailjs',
+          '@heroicons/react/24/solid': 'HeroIconsSolid',
+          '@heroicons/react/24/outline': 'HeroIconsOutline'
         }
       }
     }
