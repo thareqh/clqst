@@ -1,0 +1,35 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Fungsi helper untuk mengecek apakah user sudah login
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Fungsi helper untuk mengecek apakah data yang diupdate valid
+    function isValidData() {
+      return request.resource.data.keys().hasAll(['createdAt', 'updatedAt']) &&
+             request.resource.data.createdAt is string &&
+             request.resource.data.updatedAt is string;
+    }
+
+    // Projects collection
+    match /projects/{projectId} {
+      allow read: if true; // Mengizinkan semua orang untuk membaca project
+      allow create: if isAuthenticated() && isValidData();
+      allow update: if isAuthenticated() && isValidData() &&
+                      (resource.data.owner.id == request.auth.uid ||
+                       request.auth.uid in resource.data.members[].id);
+      allow delete: if isAuthenticated() && resource.data.owner.id == request.auth.uid;
+    }
+
+    // Users collection
+    match /users/{userId} {
+      allow read: if true; // Mengizinkan semua orang untuk membaca profil user
+      allow create: if isAuthenticated() && request.auth.uid == userId;
+      allow update: if isAuthenticated() && request.auth.uid == userId;
+      allow delete: if isAuthenticated() && request.auth.uid == userId;
+    }
+  }
+} 

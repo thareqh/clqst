@@ -1,0 +1,16 @@
+/* Component styles */
+@tailwind components;
+
+@layer components {
+  .btn {
+    @apply px-4 py-2 text-sm font-semibold rounded-lg transition-colors;
+  }
+  
+  .btn-primary {
+    @apply btn bg-primary-600 text-white hover:bg-primary-700;
+  }
+  
+  .btn-secondary {
+    @apply btn text-gray-900 hover:text-primary-600;
+  }
+}

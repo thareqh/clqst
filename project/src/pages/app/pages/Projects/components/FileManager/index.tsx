@@ -1,0 +1,761 @@
+import { useState, useEffect, useRef } from 'react';
+import { useAuth } from '@/hooks/useAuth';
+import { Card } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
+import { FiFolder, FiFile, FiUpload, FiFolderPlus, FiTrash2, FiArrowLeft, FiHardDrive, FiMessageCircle, FiMessageSquare, FiMove, FiCopy, FiMoreVertical, FiGrid, FiList } from 'react-icons/fi';
+import { toast } from 'sonner';
+import type { FileItem, Folder, FileSystemState } from '@/types/file';
+import { FILE_LIMITS, formatFileSize, validateFileUpload } from '@/types/file';
+import { uploadFile, getFiles, getFolders, createFolder, deleteFile, deleteFolder, getParentPath, joinPaths, moveFile, moveFolder, calculateTotalStorage } from '@/services/fileService';
+import { CreateFolderModal } from './CreateFolderModal';
+import { Menu } from '@headlessui/react';
+
+interface ResourcesTabProps {
+  projectId: string;
+}
+
+const SYSTEM_FOLDERS = [
+  {
+    name: 'discussions',
+    icon: FiMessageCircle,
+    label: 'Discussion Files',
+    color: 'text-blue-500'
+  },
+  {
+    name: 'chats',
+    icon: FiMessageSquare,
+    label: 'Chat Files',
+    color: 'text-green-500'
+  }
+];
+
+export function ResourcesTab({ projectId }: ResourcesTabProps) {
+  const { user } = useAuth();
+  const [storageInfo, setStorageInfo] = useState({
+    used: 0,
+    total: FILE_LIMITS.totalStorage,
+  });
+  const [state, setState] = useState<FileSystemState>({
+    files: [],
+    folders: [],
+    currentPath: '/',
+    selectedItems: [],
+    isLoading: false
+  });
+  const [showCreateFolderModal, setShowCreateFolderModal] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<{ [key: string]: number }>({});
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [showMoveModal, setShowMoveModal] = useState(false);
+  const [selectedItemForMove, setSelectedItemForMove] = useState<{id: string, type: 'file' | 'folder'} | null>(null);
+  const [moveTargetPath, setMoveTargetPath] = useState('/');
+  const [showContextMenu, setShowContextMenu] = useState(false);
+  const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 });
+  const [contextMenuTarget, setContextMenuTarget] = useState<{id: string, type: 'file' | 'folder'} | null>(null);
+  const [viewType, setViewType] = useState<'grid' | 'list'>('grid');
+
+  // Inisialisasi folder sistem saat komponen dimuat
+  useEffect(() => {
+    const initializeSystemFolders = async () => {
+      if (!projectId) return;
+
+      try {
+        const folders = await getFolders(projectId, '/');
+        const systemFolderPromises = SYSTEM_FOLDERS
+          .filter(sysFolder => !folders.some(f => f.name === sysFolder.name))
+          .map(sysFolder => 
+            createFolder({
+              name: sysFolder.name,
+              path: '/',
+              createdAt: new Date().toISOString(),
+              createdBy: {
+                id: user?.uid || '',
+                name: user?.displayName || 'System',
+                avatar: user?.photoURL || undefined
+              },
+              projectId,
+              isSystemFolder: true
+            })
+          );
+
+        if (systemFolderPromises.length > 0) {
+          await Promise.all(systemFolderPromises);
+          loadContent();
+        }
+      } catch (error) {
+        console.error('Error initializing system folders:', error);
+      }
+    };
+
+    initializeSystemFolders();
+  }, [projectId]);
+
+  const loadContent = async () => {
+    if (!projectId) return;
+
+    try {
+      console.log('Loading content for path:', state.currentPath);
+      setState(prev => ({ ...prev, isLoading: true }));
+      
+      // Calculate total storage used
+      const totalUsed = await calculateTotalStorage(projectId);
+      setStorageInfo(prev => ({ ...prev, used: totalUsed }));
+
+      // Get current path content
+      const [files, folders] = await Promise.all([
+        getFiles(projectId, state.currentPath),
+        getFolders(projectId, state.currentPath)
+      ]);
+      
+      console.log('Loaded content:', { files, folders });
+      
+      setState(prev => ({
+        ...prev,
+        files,
+        folders,
+        isLoading: false
+      }));
+    } catch (error) {
+      console.error('Error loading content:', error);
+      toast.error('Failed to load files and folders');
+      setState(prev => ({ ...prev, isLoading: false, error: 'Failed to load content' }));
+    }
+  };
+
+  useEffect(() => {
+    loadContent();
+  }, [projectId, state.currentPath]);
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []);
+    console.log('Selected files:', files);
+    if (files.length === 0) return;
+
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+
+    // Check file count
+    if (files.length > FILE_LIMITS.maxFileCount) {
+      toast.error(`Maksimum ${FILE_LIMITS.maxFileCount} file dalam satu kali upload`);
+      return;
+    }
+
+    // Validate each file
+    const invalidFiles = files.map(file => ({
+      file,
+      validation: validateFileUpload(file)
+    })).filter(item => !item.validation.valid);
+
+    if (invalidFiles.length > 0) {
+      invalidFiles.forEach(item => {
+        toast.error(`${item.file.name}: ${item.validation.error}`);
+      });
+      return;
+    }
+
+    // Check total size
+    const totalSize = files.reduce((acc, file) => acc + file.size, 0);
+    console.log('Total size:', formatFileSize(totalSize), 'Current used:', formatFileSize(storageInfo.used), 'Total limit:', formatFileSize(storageInfo.total));
+    
+    if (totalSize + storageInfo.used > storageInfo.total) {
+      toast.error(`Upload akan melebihi batas penyimpanan. Tersisa ${formatFileSize(storageInfo.total - storageInfo.used)}`);
+      return;
+    }
+
+    // Initialize progress
+    const initialProgress = files.reduce((acc, file) => ({
+      ...acc,
+      [file.name]: 0
+    }), {});
+    setUploadProgress(initialProgress);
+    console.log('Starting upload for files:', files.map(f => f.name));
+
+    try {
+      setState(prev => ({ ...prev, isLoading: true }));
+      
+      await Promise.all(
+        files.map(async (file) => {
+          try {
+            console.log('Uploading file:', file.name);
+            // Update progress as file uploads
+            const onProgress = (progress: number) => {
+              console.log(`Upload progress for ${file.name}:`, progress);
+              setUploadProgress(prev => ({
+                ...prev,
+                [file.name]: progress
+              }));
+            };
+
+            const uploadedFile = await uploadFile(
+              file, 
+              projectId, 
+              state.currentPath, 
+              onProgress,
+              user ? {
+                uid: user.uid,
+                displayName: user.displayName || 'Anonymous',
+                photoURL: user.photoURL || undefined
+              } : undefined
+            );
+            console.log('File uploaded successfully:', uploadedFile);
+            
+            // Clear progress when done
+            setUploadProgress(prev => {
+              const newProgress = { ...prev };
+              delete newProgress[file.name];
+              return newProgress;
+            });
+          } catch (error) {
+            console.error(`Error uploading ${file.name}:`, error);
+            toast.error(`Failed to upload ${file.name}`);
+          }
+        })
+      );
+
+      toast.success('Files uploaded successfully');
+      loadContent();
+    } catch (error) {
+      console.error('Error uploading files:', error);
+      toast.error('Failed to upload files');
+    } finally {
+      setState(prev => ({ ...prev, isLoading: false }));
+      setUploadProgress({});
+    }
+  };
+
+  const handleCreateFolder = async (folderName: string) => {
+    try {
+      setState(prev => ({ ...prev, isLoading: true }));
+      
+      await createFolder({
+        name: folderName,
+        path: state.currentPath,
+        createdAt: new Date().toISOString(),
+        createdBy: {
+          id: user?.uid || '',
+          name: user?.displayName || 'Anonymous',
+          avatar: user?.photoURL || undefined
+        },
+        projectId
+      });
+
+      toast.success('Folder created successfully');
+      loadContent();
+    } catch (error) {
+      console.error('Error creating folder:', error);
+      toast.error('Failed to create folder');
+    } finally {
+      setState(prev => ({ ...prev, isLoading: false }));
+    }
+  };
+
+  const handleDelete = async () => {
+    if (state.selectedItems.length === 0) return;
+
+    const confirmed = window.confirm('Are you sure you want to delete selected items?');
+    if (!confirmed) return;
+
+    try {
+      setState(prev => ({ ...prev, isLoading: true }));
+
+      await Promise.all(
+        state.selectedItems.map(async (id) => {
+          const file = state.files.find(f => f.id === id);
+          const folder = state.folders.find(f => f.id === id);
+
+          if (file) {
+            await deleteFile(projectId, file.id, file.url);
+          } else if (folder && !folder.isSystemFolder) {
+            await deleteFolder(projectId, folder.id);
+          }
+        })
+      );
+
+      toast.success('Items deleted successfully');
+      setState(prev => ({ ...prev, selectedItems: [] }));
+      loadContent();
+    } catch (error) {
+      console.error('Error deleting items:', error);
+      toast.error('Failed to delete items');
+    } finally {
+      setState(prev => ({ ...prev, isLoading: false }));
+    }
+  };
+
+  const handleNavigate = (path: string) => {
+    console.log('Navigating to path:', path);
+    // Normalize path to remove multiple slashes
+    const normalizedPath = '/' + path.split('/').filter(Boolean).join('/');
+    console.log('Normalized path:', normalizedPath);
+    setState(prev => ({ ...prev, currentPath: normalizedPath, selectedItems: [] }));
+  };
+
+  const handleSelect = (id: string) => {
+    setState(prev => ({
+      ...prev,
+      selectedItems: prev.selectedItems.includes(id)
+        ? prev.selectedItems.filter(item => item !== id)
+        : [...prev.selectedItems, id]
+    }));
+  };
+
+  const getStorageUsagePercentage = () => {
+    return (storageInfo.used / storageInfo.total) * 100;
+  };
+
+  const handleMove = async (itemId: string, type: 'file' | 'folder', targetPath: string) => {
+    try {
+      setState(prev => ({ ...prev, isLoading: true }));
+      
+      if (type === 'file') {
+        await moveFile(projectId, itemId, targetPath);
+      } else {
+        await moveFolder(projectId, itemId, targetPath);
+      }
+
+      toast.success(`${type === 'file' ? 'File' : 'Folder'} moved successfully`);
+      loadContent();
+    } catch (error) {
+      console.error('Error moving item:', error);
+      toast.error(`Failed to move ${type}`);
+    } finally {
+      setState(prev => ({ ...prev, isLoading: false }));
+      setShowMoveModal(false);
+      setSelectedItemForMove(null);
+    }
+  };
+
+  const handleContextMenu = (e: React.MouseEvent, id: string, type: 'file' | 'folder') => {
+    e.preventDefault();
+    setContextMenuPosition({ x: e.clientX, y: e.clientY });
+    setContextMenuTarget({ id, type });
+    setShowContextMenu(true);
+  };
+
+  // Close context menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = () => {
+      setShowContextMenu(false);
+    };
+
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, []);
+
+  return (
+    <div className="space-y-8">
+      {/* Storage Info */}
+      <Card className="overflow-hidden shadow-sm">
+        <div className="border-b border-gray-100 bg-gray-50/50 px-8 py-5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-primary-50 rounded-lg">
+                <FiHardDrive className="w-5 h-5 text-primary-500" />
+              </div>
+              <div>
+                <h3 className="text-base font-medium text-gray-900">Storage Usage</h3>
+                <p className="text-sm text-gray-500 mt-0.5">
+                  {formatFileSize(storageInfo.used)} of {formatFileSize(storageInfo.total)} used
+                </p>
+              </div>
+            </div>
+            <span className="text-sm font-medium text-gray-700">
+              {Math.round(getStorageUsagePercentage())}% used
+            </span>
+          </div>
+        </div>
+        <div className="px-8 py-6">
+          <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all duration-300 ${
+                getStorageUsagePercentage() > 90 
+                  ? 'bg-red-500' 
+                  : getStorageUsagePercentage() > 70 
+                    ? 'bg-yellow-500' 
+                    : 'bg-primary-500'
+              }`}
+              style={{ width: `${getStorageUsagePercentage()}%` }}
+            />
+          </div>
+        </div>
+      </Card>
+
+      {/* File Management */}
+      <div className="flex items-center justify-between bg-white px-6 py-4 rounded-lg shadow-sm border border-gray-100">
+        <div className="flex items-center gap-4">
+          {state.currentPath !== '/' && (
+            <Button
+              variant="outline"
+              onClick={() => handleNavigate(getParentPath(state.currentPath))}
+              className="flex items-center gap-2 hover:bg-gray-50"
+            >
+              <FiArrowLeft className="w-4 h-4" />
+              Back
+            </Button>
+          )}
+          <div className="flex items-center gap-2 text-sm text-gray-600">
+            <span className="font-medium">Current path:</span>
+            <span className="bg-gray-50 px-3 py-1 rounded-md">{state.currentPath}</span>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center border rounded-lg overflow-hidden">
+            <button
+              onClick={() => setViewType('grid')}
+              className={`p-2 ${viewType === 'grid' ? 'bg-primary-50 text-primary-600' : 'hover:bg-gray-50'}`}
+              title="Grid view"
+            >
+              <FiGrid className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setViewType('list')}
+              className={`p-2 ${viewType === 'list' ? 'bg-primary-50 text-primary-600' : 'hover:bg-gray-50'}`}
+              title="List view"
+            >
+              <FiList className="w-4 h-4" />
+            </button>
+          </div>
+          {state.currentPath !== '/discussions' && state.currentPath !== '/chats' && (
+            <>
+              <Button
+                variant="outline"
+                onClick={() => setShowCreateFolderModal(true)}
+                className="flex items-center gap-2 hover:bg-gray-50"
+              >
+                <FiFolderPlus className="w-4 h-4" />
+                New Folder
+              </Button>
+              <Button 
+                variant="primary" 
+                className="flex items-center gap-2 shadow-sm hover:shadow-md transition-shadow group relative"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <FiUpload className="w-4 h-4" />
+                Upload Files
+                <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-64 bg-gray-900 text-white text-xs rounded-lg py-2 px-3 hidden group-hover:block">
+                  <div className="text-center space-y-1">
+                    <div>Max file size: {formatFileSize(FILE_LIMITS.maxFileSize)}</div>
+                    <div>Max files: {FILE_LIMITS.maxFileCount} files</div>
+                    <div>Storage left: {formatFileSize(storageInfo.total - storageInfo.used)}</div>
+                  </div>
+                  <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 w-2 h-2 bg-gray-900 rotate-45"></div>
+                </div>
+              </Button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                onChange={handleFileUpload}
+                className="hidden"
+                accept="*/*"
+              />
+            </>
+          )}
+          {state.selectedItems.length > 0 && (
+            <Button
+              variant="outline"
+              onClick={handleDelete}
+              className="flex items-center gap-2 text-red-600 hover:bg-red-50 hover:border-red-200"
+            >
+              <FiTrash2 className="w-4 h-4" />
+              Delete Selected
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* Upload Progress */}
+      {Object.keys(uploadProgress).length > 0 && (
+        <Card className="p-6 shadow-sm">
+          <h3 className="text-base font-medium text-gray-900 mb-5 flex items-center gap-2">
+            <FiUpload className="w-5 h-5 text-primary-500" />
+            Uploading Files...
+          </h3>
+          <div className="space-y-4">
+            {Object.entries(uploadProgress).map(([fileName, progress]) => (
+              <div key={fileName} className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="font-medium text-gray-700 truncate max-w-[80%]">{fileName}</span>
+                  <span className="text-primary-600 font-medium">{Math.round(progress)}%</span>
+                </div>
+                <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-primary-500 transition-all duration-300"
+                    style={{ width: `${progress}%` }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {/* Content */}
+      <Card className="overflow-hidden shadow-sm">
+        <div className="border-b border-gray-100 bg-gray-50/50 px-8 py-5">
+          <h2 className="text-base font-medium text-gray-900">Files & Folders</h2>
+        </div>
+        <div className="p-8">
+          {state.isLoading ? (
+            <div className="flex items-center justify-center h-48">
+              <div className="flex flex-col items-center gap-3">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500"></div>
+                <span className="text-sm text-gray-500">Loading content...</span>
+              </div>
+            </div>
+          ) : state.folders.length === 0 && state.files.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-48 text-center">
+              <span className="text-5xl mb-4">📁</span>
+              <span className="text-gray-500 text-lg">This folder is empty</span>
+              <p className="text-sm text-gray-400 mt-2">Upload files or create folders to get started</p>
+            </div>
+          ) : (
+            <div className="space-y-8">
+              {/* Folders */}
+              {state.folders.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-medium text-gray-700 mb-4 flex items-center gap-2">
+                    <FiFolder className="w-4 h-4" />
+                    Folders
+                  </h3>
+                  <div className={viewType === 'grid' ? 
+                    "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" : 
+                    "flex flex-col gap-2"
+                  }>
+                    {state.folders.map((folder) => {
+                      const systemFolder = SYSTEM_FOLDERS.find(sf => sf.name === folder.name);
+                      const Icon = systemFolder?.icon || FiFolder;
+                      
+                      return (
+                        <div
+                          key={folder.id}
+                          className={`${
+                            viewType === 'grid' ? 'p-4' : 'p-3'
+                          } rounded-lg border transition-all duration-200 hover:shadow-md ${
+                            state.selectedItems.includes(folder.id)
+                              ? 'bg-primary-50 border-primary-200 shadow-sm'
+                              : 'bg-white border-gray-200 hover:border-gray-300'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div 
+                              className="flex-1 flex items-center gap-3 cursor-pointer group"
+                              onClick={() => handleNavigate(joinPaths(state.currentPath, folder.name))}
+                            >
+                              <div className={`p-2 rounded-lg transition-colors ${
+                                systemFolder?.color ? 'bg-blue-50' : 'bg-primary-50 group-hover:bg-primary-100'
+                              }`}>
+                                <Icon className={`w-5 h-5 ${systemFolder?.color || 'text-primary-500'}`} />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="font-medium text-gray-900 truncate group-hover:text-primary-600">
+                                  {systemFolder?.label || folder.name}
+                                </div>
+                                <div className="text-xs text-gray-500 mt-0.5">
+                                  {folder.isSystemFolder ? 'System Folder' : `Created by ${folder.createdBy.name}`}
+                                </div>
+                              </div>
+                            </div>
+                            {!folder.isSystemFolder && (
+                              <Menu as="div" className="relative">
+                                <Menu.Button className="p-2 rounded-full hover:bg-gray-100">
+                                  <FiMoreVertical className="w-4 h-4 text-gray-500" />
+                                </Menu.Button>
+                                <Menu.Items className="absolute right-0 mt-1 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-10">
+                                  <Menu.Item>
+                                    {({ active }) => (
+                                      <button
+                                        className={`${
+                                          active ? 'bg-gray-50' : ''
+                                        } w-full px-4 py-2 text-left text-sm flex items-center gap-2`}
+                                        onClick={() => {
+                                          setSelectedItemForMove({ id: folder.id, type: 'folder' });
+                                          setShowMoveModal(true);
+                                        }}
+                                      >
+                                        <FiMove className="w-4 h-4" />
+                                        Move
+                                      </button>
+                                    )}
+                                  </Menu.Item>
+                                  <Menu.Item>
+                                    {({ active }) => (
+                                      <button
+                                        className={`${
+                                          active ? 'bg-red-50' : ''
+                                        } w-full px-4 py-2 text-left text-sm flex items-center gap-2 text-red-600`}
+                                        onClick={() => {
+                                          setState(prev => ({ ...prev, selectedItems: [folder.id] }));
+                                          handleDelete();
+                                        }}
+                                      >
+                                        <FiTrash2 className="w-4 h-4" />
+                                        Delete
+                                      </button>
+                                    )}
+                                  </Menu.Item>
+                                </Menu.Items>
+                              </Menu>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Files */}
+              {state.files.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-medium text-gray-700 mb-4 flex items-center gap-2">
+                    <FiFile className="w-4 h-4" />
+                    Files
+                  </h3>
+                  <div className={viewType === 'grid' ? 
+                    "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" : 
+                    "flex flex-col gap-2"
+                  }>
+                    {state.files.map((file) => (
+                      <div
+                        key={file.id}
+                        className={`${
+                          viewType === 'grid' ? 'p-4' : 'p-3'
+                        } rounded-lg border transition-all duration-200 hover:shadow-md ${
+                          state.selectedItems.includes(file.id)
+                            ? 'bg-primary-50 border-primary-200 shadow-sm'
+                            : 'bg-white border-gray-200 hover:border-gray-300'
+                        }`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <div 
+                            className="flex-1 flex items-start gap-3 cursor-pointer group min-w-0"
+                            onClick={() => window.open(file.url, '_blank')}
+                          >
+                            <div className="p-2 rounded-lg bg-gray-50 group-hover:bg-gray-100 shrink-0">
+                              <FiFile className="w-5 h-5 text-gray-500" />
+                            </div>
+                            <div className="flex-1 min-w-0 py-1">
+                              <div className="font-medium text-gray-900 break-all group-hover:text-primary-600">
+                                {file.name}
+                              </div>
+                              <div className="text-xs text-gray-500 mt-1">
+                                {formatFileSize(file.size || 0)} • {file.type}
+                              </div>
+                            </div>
+                          </div>
+                          <Menu as="div" className="relative shrink-0">
+                            <Menu.Button className="p-2 rounded-full hover:bg-gray-100">
+                              <FiMoreVertical className="w-4 h-4 text-gray-500" />
+                            </Menu.Button>
+                            <Menu.Items className="absolute right-0 mt-1 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-10">
+                              <Menu.Item>
+                                {({ active }) => (
+                                  <button
+                                    className={`${
+                                      active ? 'bg-gray-50' : ''
+                                    } w-full px-4 py-2 text-left text-sm flex items-center gap-2`}
+                                    onClick={() => {
+                                      setSelectedItemForMove({ id: file.id, type: 'file' });
+                                      setShowMoveModal(true);
+                                    }}
+                                  >
+                                    <FiMove className="w-4 h-4" />
+                                    Move
+                                  </button>
+                                )}
+                              </Menu.Item>
+                              <Menu.Item>
+                                {({ active }) => (
+                                  <button
+                                    className={`${
+                                      active ? 'bg-red-50' : ''
+                                    } w-full px-4 py-2 text-left text-sm flex items-center gap-2 text-red-600`}
+                                    onClick={() => {
+                                      setState(prev => ({ ...prev, selectedItems: [file.id] }));
+                                      handleDelete();
+                                    }}
+                                  >
+                                    <FiTrash2 className="w-4 h-4" />
+                                    Delete
+                                  </button>
+                                )}
+                              </Menu.Item>
+                            </Menu.Items>
+                          </Menu>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </Card>
+
+      {/* Move Modal */}
+      {showMoveModal && selectedItemForMove && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <Card className="w-full max-w-md p-6">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2 bg-primary-50 rounded-lg">
+                <FiMove className="w-5 h-5 text-primary-500" />
+              </div>
+              <h3 className="text-lg font-medium">Move {selectedItemForMove.type === 'file' ? 'File' : 'Folder'}</h3>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Select destination folder
+                </label>
+                <select
+                  value={moveTargetPath}
+                  onChange={(e) => setMoveTargetPath(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white"
+                >
+                  <option value="/">Root</option>
+                  {state.folders
+                    .filter(f => !f.isSystemFolder)
+                    .map(folder => (
+                      <option key={folder.id} value={joinPaths(folder.path, folder.name)}>
+                        {joinPaths(folder.path, folder.name)}
+                      </option>
+                    ))
+                  }
+                </select>
+              </div>
+              <div className="flex justify-end gap-3 pt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowMoveModal(false);
+                    setSelectedItemForMove(null);
+                  }}
+                  className="hover:bg-gray-50"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="primary"
+                  onClick={() => handleMove(selectedItemForMove.id, selectedItemForMove.type, moveTargetPath)}
+                  className="shadow-sm hover:shadow-md transition-shadow"
+                >
+                  Move
+                </Button>
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* Create Folder Modal */}
+      <CreateFolderModal
+        isOpen={showCreateFolderModal}
+        onClose={() => setShowCreateFolderModal(false)}
+        onSubmit={handleCreateFolder}
+      />
+    </div>
+  );
+} 

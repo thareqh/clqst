@@ -1,0 +1,29 @@
+@tailwind base;
+
+@layer base {
+  html {
+    font-family: 'Inter var', system-ui, -apple-system, sans-serif;
+    height: 100%;
+    scroll-behavior: auto !important;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+  
+  body {
+    @apply antialiased text-gray-900 bg-white min-h-screen;
+    min-height: -webkit-fill-available;
+    overflow-x: hidden;
+  }
+
+  h1, h2, h3, h4 {
+    @apply font-normal tracking-tight;
+  }
+
+  input, textarea {
+    @apply rounded-full border-gray-200 focus:border-gray-400 focus:ring-0 transition-colors;
+  }
+
+  textarea {
+    @apply rounded-3xl;
+  }
+}
