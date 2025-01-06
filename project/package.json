@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@emailjs/browser": "^3.11.0",
     "@emotion/is-prop-valid": "^1.2.1",
     "@emotion/memoize": "^0.8.1",
     "@headlessui/react": "^1.7.17",
