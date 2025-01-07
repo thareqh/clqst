@@ -15,11 +15,12 @@ export default defineConfig({
   },
   build: {
     rollupOptions: {
-      external: ['date-fns', '@emailjs/browser'],
+      external: ['date-fns', '@emailjs/browser', 'react-hot-toast'],
       output: {
         globals: {
           'date-fns': 'dateFns',
-          '@emailjs/browser': 'emailjs'
+          '@emailjs/browser': 'emailjs',
+          'react-hot-toast': 'toast'
         }
       }
     }
