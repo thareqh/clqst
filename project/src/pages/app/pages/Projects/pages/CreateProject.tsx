@@ -15,7 +15,7 @@ import { ProjectRoleInput } from '../components/forms/ProjectRoleInput';
 import type { ProjectRole } from '../../../../../types/project';
 import { collection, addDoc, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/config/firebase';
-import { HiInformationCircle, HiCheck } from 'react-icons/hi';
+import { InformationCircleIcon, CheckIcon } from '@heroicons/react/24/solid';
 import { createSystemFolders } from '@/services/fileService';
 import { toast } from 'react-hot-toast';
 
@@ -316,7 +316,7 @@ export function CreateProject() {
                   Project Title
                 </label>
                 <div className="group relative">
-                  <HiInformationCircle className="w-4 h-4 text-gray-400 cursor-help" />
+                  <InformationCircleIcon className="w-4 h-4 text-gray-400 cursor-help" />
                   <div className="invisible group-hover:visible absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg max-w-lg">
                     {TOOLTIPS.title}
                   </div>
@@ -337,7 +337,7 @@ export function CreateProject() {
                 <div className="flex items-center gap-2 mb-2">
                   <label className="block text-sm text-gray-600">Category</label>
                   <div className="group relative">
-                    <HiInformationCircle className="w-4 h-4 text-gray-400 cursor-help" />
+                    <InformationCircleIcon className="w-4 h-4 text-gray-400 cursor-help" />
                     <div className="invisible group-hover:visible absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg max-w-lg">
                       {TOOLTIPS.category}
                     </div>
@@ -361,7 +361,7 @@ export function CreateProject() {
                 <div className="flex items-center gap-2 mb-2">
                   <label className="block text-sm text-gray-600">Phase</label>
                   <div className="group relative">
-                    <HiInformationCircle className="w-4 h-4 text-gray-400 cursor-help" />
+                    <InformationCircleIcon className="w-4 h-4 text-gray-400 cursor-help" />
                     <div className="invisible group-hover:visible absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg max-w-lg">
                       {TOOLTIPS.phase}
                     </div>
@@ -388,7 +388,7 @@ export function CreateProject() {
               Short Description
             </label>
                 <div className="group relative">
-                  <HiInformationCircle className="w-4 h-4 text-gray-400 cursor-help" />
+                  <InformationCircleIcon className="w-4 h-4 text-gray-400 cursor-help" />
                   <div className="invisible group-hover:visible absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg max-w-lg">
                     {TOOLTIPS.shortDescription}
                   </div>
@@ -411,7 +411,7 @@ export function CreateProject() {
                   Website URL <span className="text-gray-400">(Optional)</span>
                 </label>
                 <div className="group relative">
-                  <HiInformationCircle className="w-4 h-4 text-gray-400 cursor-help" />
+                  <InformationCircleIcon className="w-4 h-4 text-gray-400 cursor-help" />
                   <div className="invisible group-hover:visible absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg max-w-lg">
                     {TOOLTIPS.websiteUrl}
                   </div>
@@ -437,7 +437,7 @@ export function CreateProject() {
                   Problem Statement
                 </label>
                 <div className="group relative">
-                  <HiInformationCircle className="w-4 h-4 text-gray-400 cursor-help" />
+                  <InformationCircleIcon className="w-4 h-4 text-gray-400 cursor-help" />
                   <div className="invisible group-hover:visible absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg max-w-lg">
                     {TOOLTIPS.problemStatement}
                   </div>
@@ -459,7 +459,7 @@ export function CreateProject() {
                   Expected Outcomes
                 </label>
                 <div className="group relative">
-                  <HiInformationCircle className="w-4 h-4 text-gray-400 cursor-help" />
+                  <InformationCircleIcon className="w-4 h-4 text-gray-400 cursor-help" />
                   <div className="invisible group-hover:visible absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg max-w-lg">
                     {TOOLTIPS.expectedOutcomes}
                   </div>
@@ -481,7 +481,7 @@ export function CreateProject() {
                   Target Audience
                 </label>
                 <div className="group relative">
-                  <HiInformationCircle className="w-4 h-4 text-gray-400 cursor-help" />
+                  <InformationCircleIcon className="w-4 h-4 text-gray-400 cursor-help" />
                   <div className="invisible group-hover:visible absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg max-w-lg">
                     {TOOLTIPS.targetAudience}
                   </div>
@@ -503,7 +503,7 @@ export function CreateProject() {
               Full Description
             </label>
                 <div className="group relative">
-                  <HiInformationCircle className="w-4 h-4 text-gray-400 cursor-help" />
+                  <InformationCircleIcon className="w-4 h-4 text-gray-400 cursor-help" />
                   <div className="invisible group-hover:visible absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg max-w-lg">
                     {TOOLTIPS.description}
                   </div>
@@ -530,7 +530,7 @@ export function CreateProject() {
                   Project Goals
                 </label>
                 <div className="group relative">
-                  <HiInformationCircle className="w-4 h-4 text-gray-400 cursor-help" />
+                  <InformationCircleIcon className="w-4 h-4 text-gray-400 cursor-help" />
                   <div className="invisible group-hover:visible absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg max-w-lg">
                     {TOOLTIPS.projectGoals}
                   </div>
@@ -583,7 +583,7 @@ export function CreateProject() {
                   Milestones
                 </label>
                 <div className="group relative">
-                  <HiInformationCircle className="w-4 h-4 text-gray-400 cursor-help" />
+                  <InformationCircleIcon className="w-4 h-4 text-gray-400 cursor-help" />
                   <div className="invisible group-hover:visible absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg max-w-lg">
                     {TOOLTIPS.milestones}
                   </div>
@@ -664,7 +664,7 @@ export function CreateProject() {
                   Required Skills
                 </label>
                 <div className="group relative">
-                  <HiInformationCircle className="w-4 h-4 text-gray-400 cursor-help" />
+                  <InformationCircleIcon className="w-4 h-4 text-gray-400 cursor-help" />
                   <div className="invisible group-hover:visible absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg max-w-lg">
                     {TOOLTIPS.skills}
                   </div>
@@ -684,7 +684,7 @@ export function CreateProject() {
                 <div className="flex items-center gap-2">
               <h2 className="text-lg font-medium">Roles</h2>
                   <div className="group relative">
-                    <HiInformationCircle className="w-4 h-4 text-gray-400 cursor-help" />
+                    <InformationCircleIcon className="w-4 h-4 text-gray-400 cursor-help" />
                     <div className="invisible group-hover:visible absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg max-w-lg">
                       {TOOLTIPS.roles}
                     </div>
