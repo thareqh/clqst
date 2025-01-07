@@ -18,7 +18,9 @@ export default defineConfig({
       'date-fns',
       '@emailjs/browser',
       'react-hot-toast',
-      'emoji-picker-react'
+      'emoji-picker-react',
+      '@heroicons/react/24/solid',
+      '@heroicons/react/24/outline'
     ]
   },
   build: {
