@@ -13,17 +13,22 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src')
     }
   },
+  optimizeDeps: {
+    include: [
+      'date-fns',
+      '@emailjs/browser',
+      'react-hot-toast',
+      'emoji-picker-react'
+    ]
+  },
   build: {
-    rollupOptions: {
-      external: ['date-fns', '@emailjs/browser', 'react-hot-toast', 'emoji-picker-react'],
-      output: {
-        globals: {
-          'date-fns': 'dateFns',
-          '@emailjs/browser': 'emailjs',
-          'react-hot-toast': 'toast',
-          'emoji-picker-react': 'EmojiPicker'
-        }
-      }
-    }
+    commonjsOptions: {
+      include: [/node_modules/],
+      transformMixedEsModules: true
+    },
+    sourcemap: false,
+    minify: 'terser',
+    cssCodeSplit: true,
+    chunkSizeWarningLimit: 1600
   }
 })
