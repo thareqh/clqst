@@ -17,6 +17,7 @@
     "@types/react-router-dom": "^5.3.3",
     "clsx": "^2.0.0",
     "date-fns": "^2.30.0",
+    "emoji-picker-react": "^4.5.16",
     "firebase": "^10.5.0",
     "framer-motion": "^10.16.4",
     "react": "^18.2.0",
