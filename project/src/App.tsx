@@ -12,9 +12,12 @@ import AuthPage from './pages/auth/index';
 import ProfilePage from './pages/profile/index';
 import AppLayout from './pages/app/index';
 import { UserProfile } from './pages/app/pages/UserProfile';
-import { Analytics } from '@vercel/analytics/react';
+import { inject } from '@vercel/analytics';
 
 console.log('App rendering');
+
+// Initialize analytics
+inject();
 
 export default function App() {
   return (
@@ -52,7 +55,6 @@ export default function App() {
           </ProtectedRoute>
         } />
       </Routes>
-      <Analytics />
     </>
   );
 }
