@@ -14,8 +14,14 @@ export default defineConfig({
     }
   },
   build: {
-    commonjsOptions: {
-      include: [/@heroicons\/react/, /node_modules/]
+    rollupOptions: {
+      external: ['date-fns', '@emailjs/browser'],
+      output: {
+        globals: {
+          'date-fns': 'dateFns',
+          '@emailjs/browser': 'emailjs'
+        }
+      }
     }
   }
 })
