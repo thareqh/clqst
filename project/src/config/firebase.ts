@@ -3,14 +3,14 @@ import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 
-// Firebase configuration should be in .env file
+// Firebase configuration
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID
+  apiKey: "AIzaSyCQ3AIegnhn8u3BpLs5uwFIYSOjtqM3Tfg",
+  authDomain: "cliquestproject.firebaseapp.com",
+  projectId: "cliquestproject",
+  storageBucket: "cliquestproject.appspot.com",
+  messagingSenderId: "580381983407",
+  appId: "1:580381983407:web:0b4426037ee718ec808a5a"
 };
 
 // Initialize Firebase
