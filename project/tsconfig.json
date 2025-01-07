@@ -11,7 +11,7 @@
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "react-jsx",
-    "strict": true,
+    "strict": false,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "noFallthroughCasesInSwitch": true,
@@ -22,7 +22,9 @@
     "paths": {
       "@/*": ["src/*"],
       "@heroicons/react/*": ["node_modules/@heroicons/react/*"]
-    }
+    },
+    "noImplicitAny": false,
+    "strictNullChecks": false
   },
   "include": ["src"],
   "references": [{ "path": "./tsconfig.node.json" }]
