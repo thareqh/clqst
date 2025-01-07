@@ -10,27 +10,24 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src')
+      '@': path.resolve(__dirname, './src'),
+      '@heroicons/react': path.resolve(__dirname, 'node_modules/@heroicons/react')
     }
   },
-  optimizeDeps: {
-    include: [
-      'date-fns',
-      '@emailjs/browser',
-      'react-hot-toast',
-      'emoji-picker-react',
-      '@heroicons/react/24/solid',
-      '@heroicons/react/24/outline'
-    ]
-  },
   build: {
-    commonjsOptions: {
-      include: [/node_modules/],
-      transformMixedEsModules: true
+    rollupOptions: {
+      onwarn(warning, warn) {
+        if (warning.code === 'MODULE_LEVEL_DIRECTIVE') {
+          return
+        }
+        warn(warning)
+      }
     },
+    target: 'esnext',
+    outDir: 'dist',
+    assetsDir: 'assets',
+    emptyOutDir: true,
     sourcemap: false,
-    minify: 'terser',
-    cssCodeSplit: true,
-    chunkSizeWarningLimit: 1600
+    minify: 'terser'
   }
 })
