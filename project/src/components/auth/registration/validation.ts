@@ -9,6 +9,10 @@ export function validateEmail(email: string): { message: string } | null {
 }
 
 export function validatePassword(password: string): { message: string } | null {
+  if (!password) {
+    return { message: 'Password is required' };
+  }
+
   if (password.length < 8) {
     return { message: 'Password must be at least 8 characters long' };
   }
@@ -31,6 +35,10 @@ export function validatePassword(password: string): { message: string } | null {
 }
 
 export function validatePasswordConfirm(password: string, confirm: string): { message: string } | null {
+  if (!confirm) {
+    return { message: 'Please confirm your password' };
+  }
+  
   if (password !== confirm) {
     return { message: 'Passwords do not match' };
   }
@@ -42,24 +50,31 @@ export function validateCurrentStep(step: number, data: RegistrationData): Recor
 
   switch (step) {
     case 1: // Basic Info
-      if (!data.email) errors.email = 'Email is required';
-      if (!data.fullName) errors.fullName = 'Full name is required';
-      if (!data.password) errors.password = 'Password is required';
-      if (!data.passwordConfirm) errors.passwordConfirm = 'Please confirm your password';
-
-      if (data.email) {
+      // Email validation
+      if (!data.email) {
+        errors.email = 'Email is required';
+      } else {
         const emailError = validateEmail(data.email);
         if (emailError) errors.email = emailError.message;
       }
 
-      if (data.password) {
-        const passwordError = validatePassword(data.password);
-        if (passwordError) errors.password = passwordError.message;
+      // Full name validation
+      if (!data.fullName?.trim()) {
+        errors.fullName = 'Full name is required';
       }
 
-      if (data.password && data.passwordConfirm) {
+      // Password validation
+      const passwordError = validatePassword(data.password);
+      if (passwordError) {
+        errors.password = passwordError.message;
+      }
+
+      // Confirm password validation
+      if (data.password) {
         const confirmError = validatePasswordConfirm(data.password, data.passwordConfirm);
-        if (confirmError) errors.passwordConfirm = confirmError.message;
+        if (confirmError) {
+          errors.passwordConfirm = confirmError.message;
+        }
       }
       break;
 

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ProgressIndicator } from './ProgressIndicator';
@@ -21,13 +21,25 @@ export function RegistrationWizard({ onComplete }: RegistrationWizardProps) {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [shouldValidate, setShouldValidate] = useState(false);
   const navigate = useNavigate();
 
+  // Validasi hanya jika shouldValidate true atau ada perubahan setelah validasi pertama
+  useEffect(() => {
+    if (shouldValidate) {
+      const validationErrors = validateCurrentStep(currentStep, formData);
+      setErrors(validationErrors);
+    }
+  }, [formData, currentStep, shouldValidate]);
+
   const handleNext = async () => {
+    setShouldValidate(true);
     const validationErrors = validateCurrentStep(currentStep, formData);
+    
     if (Object.keys(validationErrors).length === 0) {
       if (currentStep < 4) {
         setCurrentStep(prev => prev + 1);
+        setErrors({});
       } else {
         setIsLoading(true);
         try {
@@ -44,6 +56,17 @@ export function RegistrationWizard({ onComplete }: RegistrationWizardProps) {
     }
   };
 
+  const handleBack = () => {
+    setErrors({});
+    setCurrentStep(prev => prev - 1);
+  };
+
+  const handleUpdateFields = (fields: Partial<RegistrationData>) => {
+    setFormData(prev => ({ ...prev, ...fields }));
+  };
+
+  const isCurrentStepValid = shouldValidate ? Object.keys(errors).length === 0 : true;
+
   return (
     <div className="max-w-md mx-auto">
       <ProgressIndicator currentStep={currentStep} totalSteps={4} />
@@ -59,7 +82,8 @@ export function RegistrationWizard({ onComplete }: RegistrationWizardProps) {
           {getCurrentStep({ 
             step: currentStep, 
             data: formData, 
-            updateFields: (fields) => setFormData(prev => ({ ...prev, ...fields }))
+            updateFields: handleUpdateFields,
+            errors: shouldValidate ? errors : {}
           })}
         </motion.div>
       </AnimatePresence>
@@ -67,9 +91,9 @@ export function RegistrationWizard({ onComplete }: RegistrationWizardProps) {
       <WizardNavigation
         currentStep={currentStep}
         onNext={handleNext}
-        onBack={() => setCurrentStep(prev => prev - 1)}
+        onBack={handleBack}
         isLoading={isLoading}
-        isValid={Object.keys(errors).length === 0}
+        isValid={isCurrentStepValid}
       />
     </div>
   );

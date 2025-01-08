@@ -7,6 +7,7 @@ interface FormInputProps {
   required?: boolean;
   min?: string;
   max?: string;
+  error?: string;
 }
 
 export function FormInput({
@@ -17,7 +18,8 @@ export function FormInput({
   placeholder,
   required = true,
   min,
-  max
+  max,
+  error
 }: FormInputProps) {
   return (
     <div>
@@ -28,12 +30,15 @@ export function FormInput({
         type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full px-4 py-2 rounded-xl border"
+        className={`w-full px-4 py-2 rounded-xl border ${error ? 'border-red-500' : ''}`}
         placeholder={placeholder}
         required={required}
         min={min}
         max={max}
       />
+      {error && (
+        <p className="mt-1 text-sm text-red-500">{error}</p>
+      )}
     </div>
   );
 }

@@ -9,4 +9,5 @@ export interface GetCurrentStepProps {
   step: number;
   data: RegistrationData;
   updateFields: (fields: Partial<RegistrationData>) => void;
+  errors?: Record<string, string>;
 }

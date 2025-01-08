@@ -27,13 +27,16 @@ export function WizardNavigation({
           Back
         </Button>
       ) : (
-        // Spacer element for consistent layout
         <div className="w-24" />
       )}
       
       <Button
         variant="primary"
-        onClick={onNext}
+        onClick={() => {
+          if (!isLoading && isValid) {
+            onNext();
+          }
+        }}
         loading={isLoading}
         disabled={isLoading || !isValid}
         className="w-24"

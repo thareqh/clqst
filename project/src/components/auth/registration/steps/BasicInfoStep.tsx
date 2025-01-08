@@ -3,12 +3,17 @@ import { FormInput } from '../../FormInput';
 import { PasswordInput } from '../inputs/PasswordInput';
 import { EmailInput } from '../inputs/EmailInput';
 
-export function BasicInfoStep({ data, updateFields }: StepProps) {
+interface BasicInfoStepProps extends StepProps {
+  errors?: Record<string, string>;
+}
+
+export function BasicInfoStep({ data, updateFields, errors = {} }: BasicInfoStepProps) {
   return (
     <div className="space-y-6">
       <EmailInput
         value={data.email}
         onChange={(value) => updateFields({ email: value })}
+        error={errors.email}
       />
 
       <FormInput
@@ -18,11 +23,13 @@ export function BasicInfoStep({ data, updateFields }: StepProps) {
         onChange={(value) => updateFields({ fullName: value })}
         placeholder="John Doe"
         required
+        error={errors.fullName}
       />
 
       <PasswordInput
         value={data.password}
         onChange={(value) => updateFields({ password: value })}
+        error={errors.password}
       />
 
       <FormInput
@@ -32,6 +39,7 @@ export function BasicInfoStep({ data, updateFields }: StepProps) {
         onChange={(value) => updateFields({ passwordConfirm: value })}
         placeholder="••••••••"
         required
+        error={errors.passwordConfirm}
       />
     </div>
   );
