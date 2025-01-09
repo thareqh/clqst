@@ -42,7 +42,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Memantau perubahan status autentikasi
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
@@ -55,16 +54,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return unsubscribe;
   }, []);
 
-  // Memantau perubahan profil pengguna
   useEffect(() => {
     if (!currentUser) return;
 
     console.log('Setting up profile listener for user:', currentUser.uid);
 
-    // Membuat referensi ke dokumen profil pengguna
     const userDocRef = doc(db, 'users', currentUser.uid);
 
-    // Memantau perubahan pada dokumen profil
     const unsubscribe = onSnapshot(userDocRef, {
       next: (doc) => {
         logWithMask('Profile document changed:', doc.data());
@@ -147,10 +143,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       console.log('Updating profile with data:', data);
       
+      // Update Firebase Auth displayName jika fullName berubah
+      if (data.fullName) {
+        await updateFirebaseProfile(currentUser, {
+          displayName: data.fullName
+        });
+      }
+
       // Update server
       await updateUserProfile(currentUser.uid, data);
       
-      // Tidak perlu update state manual karena onSnapshot akan menanganinya
+      // Refresh user profile
+      await refreshUserProfile();
+      
       console.log('Profile update successful');
     } catch (error) {
       console.error('Error updating profile:', error);
@@ -164,6 +169,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const profile = await getUserProfile(currentUser.uid);
       if (profile) {
+        // Update Firebase Auth displayName untuk memastikan sinkronisasi
+        if (profile.fullName !== currentUser.displayName) {
+          await updateFirebaseProfile(currentUser, {
+            displayName: profile.fullName
+          });
+        }
         setUserProfile(profile);
       }
     } catch (error) {
