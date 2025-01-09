@@ -143,11 +143,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       console.log('Updating profile with data:', data);
       
-      // Update Firebase Auth displayName jika fullName berubah
+      // Update Firebase Auth displayName if fullName changes
       if (data.fullName) {
         await updateFirebaseProfile(currentUser, {
           displayName: data.fullName
         });
+        // Force refresh the current user to get updated displayName
+        await currentUser.reload();
+        // Update the local currentUser state
+        setCurrentUser(auth.currentUser);
       }
 
       // Update server
