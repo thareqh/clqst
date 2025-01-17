@@ -15,7 +15,8 @@ import {
   XMarkIcon,
   ArrowUturnLeftIcon,
   CheckIcon,
-  HandThumbUpIcon
+  HandThumbUpIcon,
+  ChevronLeftIcon
 } from '@heroicons/react/24/solid';
 import { toast } from 'react-hot-toast';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -120,6 +121,7 @@ export function Chat() {
   const [targetUser, setTargetUser] = useState<{id: string; name: string; avatar?: string} | null>(null);
   const navigate = useNavigate();
   const [userProfiles, setUserProfiles] = useState<Record<string, UserProfile>>({});
+  const [showSidebar, setShowSidebar] = useState(true);
 
   // Group messages by date
   const groupedMessages = messages.reduce((groups: MessageGroup[], message) => {
@@ -776,6 +778,7 @@ export function Chat() {
     setActiveProject(null);
     setChatType('dm');
     setReplyingTo(null);
+    setShowSidebar(false);
 
     // Get fresh participant data from chat document
     try {
@@ -808,6 +811,7 @@ export function Chat() {
     setActiveDM(null);
     setChatType('project');
     setReplyingTo(null);
+    setShowSidebar(false);
   };
 
   // Subscribe to user profile changes
@@ -855,20 +859,20 @@ export function Chat() {
   }, [targetUser?.id]);
 
   return (
-    <div className="h-screen flex gap-8 p-8 bg-gray-50">
+    <div className="h-[100dvh] flex flex-col sm:flex-row gap-0 sm:gap-8 p-0 sm:p-8 bg-gray-50 overflow-hidden">
         {/* Sidebar */}
-      <Card className="w-96 flex flex-col">
-        <div className="p-6 border-b">
+      <Card className={`w-full sm:w-96 flex flex-col h-[100dvh] sm:h-[calc(100dvh-4rem)] rounded-none sm:rounded-xl ${!showSidebar ? 'hidden sm:flex' : ''}`}>
+        <div className="sticky top-0 z-10 p-4 sm:p-6 border-b flex-shrink-0 bg-white">
           <h2 className="text-xl font-semibold">Chats</h2>
           </div>
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6">
           {/* Projects List */}
           <div className="space-y-3">
             {projects.map((project) => (
               <button
                 key={project.id}
                 onClick={() => handleProjectClick(project.id)}
-                className={`w-full p-4 rounded-xl flex items-center gap-4 hover:bg-gray-50 transition-colors ${
+                className={`w-full p-3 sm:p-4 rounded-xl flex items-center gap-3 sm:gap-4 hover:bg-gray-50 transition-colors ${
                   activeProject === project.id ? 'bg-primary-50 border border-primary-200' : ''
                 }`}
               >
@@ -876,16 +880,16 @@ export function Chat() {
                   <img
                     src={project.coverImage}
                     alt={project.title}
-                    className="w-10 h-10 rounded-lg object-cover"
+                    className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg object-cover"
                   />
                 ) : (
-                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary-100 to-primary-200 flex items-center justify-center">
-                    <span className="text-lg">🎯</span>
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-br from-primary-100 to-primary-200 flex items-center justify-center">
+                    <span className="text-base sm:text-lg">🎯</span>
                   </div>
                 )}
                 <div className="flex-1 text-left">
-                  <h3 className="font-medium truncate">{project.title}</h3>
-                  <p className="text-sm text-gray-500">
+                  <h3 className="font-medium truncate text-sm sm:text-base">{project.title}</h3>
+                  <p className="text-xs sm:text-sm text-gray-500">
                     {project.members.length} members
                   </p>
                 </div>
@@ -894,14 +898,14 @@ export function Chat() {
           </div>
 
               {/* Direct Messages */}
-          <div className="mt-8">
-                <h3 className="text-sm font-semibold text-gray-500 mb-3">Direct Messages</h3>
+          <div className="mt-6 sm:mt-8">
+            <h3 className="text-sm font-semibold text-gray-500 mb-2 sm:mb-3">Direct Messages</h3>
                 <div className="space-y-2">
                   {directMessages.map((dm) => (
                     <button
                       key={dm.id}
                       onClick={() => handleDMClick(dm)}
-                      className={`w-full p-2 rounded-lg flex items-center gap-3 hover:bg-gray-50 transition-colors ${
+                  className={`w-full p-2 sm:p-3 rounded-lg flex items-center gap-2 sm:gap-3 hover:bg-gray-50 transition-colors ${
                         activeDM === dm.id ? 'bg-primary-50 border border-primary-200' : ''
                       }`}
                     >
@@ -924,9 +928,9 @@ export function Chat() {
                         </div>
                       )}
                       <div className="flex-1 text-left">
-                        <h4 className="font-medium">{userProfiles[dm.userId]?.name || dm.name}</h4>
+                    <h4 className="font-medium text-sm sm:text-base">{userProfiles[dm.userId]?.name || dm.name}</h4>
                         {dm.lastMessage && (
-                          <p className="text-sm text-gray-500 truncate">
+                      <p className="text-xs sm:text-sm text-gray-500 truncate">
                             {dm.lastMessage}
                           </p>
                         )}
@@ -944,31 +948,39 @@ export function Chat() {
         </Card>
 
         {/* Chat Area */}
-      <Card className="flex-1 flex flex-col h-screen">
+      <Card className={`w-full flex-1 flex flex-col h-[100dvh] sm:h-[calc(100dvh-4rem)] rounded-none sm:rounded-xl ${showSidebar ? 'hidden sm:flex' : 'flex'}`}>
           {(activeProject || activeDM || chatId) ? (
             <>
               {/* Chat Header */}
-              <div className="px-6 py-4 border-b flex-shrink-0">
+            <div className="sticky top-0 z-20 px-4 sm:px-6 py-2 sm:py-4 border-b flex-shrink-0 bg-white">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
+                  {/* Back Button for Mobile */}
+                  <button
+                    onClick={() => setShowSidebar(true)}
+                    className="p-2 -ml-2 rounded-lg hover:bg-gray-50 transition-colors sm:hidden"
+                  >
+                    <ChevronLeftIcon className="w-5 h-5 text-gray-600" />
+                  </button>
+                  
                   {chatType === 'project' && activeProject && (
                     <div className="flex items-center gap-3">
                       {projects.find(p => p.id === activeProject)?.coverImage ? (
                         <img
                           src={projects.find(p => p.id === activeProject)?.coverImage}
                           alt={projects.find(p => p.id === activeProject)?.title}
-                          className="w-10 h-10 rounded-lg object-cover"
+                          className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg object-cover"
                         />
                       ) : (
-                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary-100 to-primary-200 flex items-center justify-center">
-                          <span className="text-lg">🎯</span>
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-br from-primary-100 to-primary-200 flex items-center justify-center">
+                          <span className="text-base sm:text-lg">🎯</span>
                         </div>
                       )}
                       <div>
-                        <h2 className="font-semibold">
+                        <h2 className="font-semibold text-sm sm:text-base">
                           {projects.find(p => p.id === activeProject)?.title}
                         </h2>
-                        <p className="text-sm text-gray-500">
+                        <p className="text-xs sm:text-sm text-gray-500">
                           {projects.find(p => p.id === activeProject)?.members.length} members
                         </p>
                       </div>
@@ -980,7 +992,7 @@ export function Chat() {
                           <img
                             src={userProfiles[targetUser.id]?.avatar || targetUser.avatar}
                             alt={userProfiles[targetUser.id]?.name || targetUser.name}
-                            className="w-10 h-10 rounded-full object-cover"
+                          className="w-8 h-8 sm:w-10 sm:h-10 rounded-full object-cover"
                           onError={(e) => {
                             if (e.currentTarget instanceof HTMLImageElement && targetUser) {
                               e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(userProfiles[targetUser.id]?.name || targetUser.name)}&background=random&size=40`;
@@ -988,13 +1000,13 @@ export function Chat() {
                           }}
                           />
                         ) : (
-                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-50 to-primary-100 flex items-center justify-center">
-                            <span className="text-lg font-semibold text-primary-600">
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-primary-50 to-primary-100 flex items-center justify-center">
+                          <span className="text-base sm:text-lg font-semibold text-primary-600">
                               {(userProfiles[targetUser.id]?.name || targetUser.name).charAt(0).toUpperCase()}
                             </span>
                           </div>
                         )}
-                      <h2 className="font-semibold">
+                      <h2 className="font-semibold text-sm sm:text-base">
                         {userProfiles[targetUser.id]?.name || targetUser.name || directMessages.find(d => d.userId === activeDM)?.name || 'Loading...'}
                       </h2>
                         </div>
@@ -1002,7 +1014,7 @@ export function Chat() {
                   </div>
 
                 {/* Search Bar */}
-                <div className="relative flex-1 max-w-md ml-4">
+                <div className="relative flex-1 max-w-md ml-4 hidden sm:block">
                   <div className="relative">
                     <input
                       type="text"
@@ -1021,38 +1033,16 @@ export function Chat() {
                       </button>
                     )}
                   </div>
-                  
-                  {/* Search Results */}
-                  {searchQuery && searchResults.length > 0 && (
-                    <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-lg border shadow-lg z-50 max-h-60 overflow-y-auto">
-                      {searchResults.map((result) => (
-                        <button
-                          key={result.id}
-                          onClick={() => {
-                            const element = document.getElementById(`message-${result.id}`);
-                            element?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                            element?.classList.add('highlight-message');
-                            setTimeout(() => element?.classList.remove('highlight-message'), 2000);
-                            setSearchQuery('');
-                          }}
-                          className="w-full p-3 text-left hover:bg-gray-50 border-b last:border-b-0"
-                        >
-                          <p className="text-sm font-medium text-gray-900">{result.sender.name}</p>
-                          <p className="text-sm text-gray-500 truncate">{result.content}</p>
-                        </button>
-                      ))}
-                    </div>
-                  )}
                 </div>
                 </div>
               </div>
 
               {/* Messages */}
-              <div className="flex-1 overflow-y-auto px-6 py-4 min-h-0 space-y-6">
+            <div className="flex-1 overflow-y-auto px-3 sm:px-6 py-2 sm:py-4 space-y-2 sm:space-y-6 max-h-[calc(100dvh-8.5rem)] sm:max-h-none">
                 {groupedMessages.map((group) => (
-                  <div key={group.date} className="space-y-6">
+                <div key={group.date} className="space-y-2 sm:space-y-6">
                     <div className="text-center sticky top-2 z-10">
-                      <span className="px-4 py-1.5 text-xs font-medium bg-white/80 text-gray-600 rounded-full shadow-sm border backdrop-blur-sm">
+                    <span className="px-2 sm:px-4 py-1 sm:py-1.5 text-xs font-medium bg-white/80 text-gray-600 rounded-full shadow-sm border backdrop-blur-sm">
                         {format(new Date(group.date), 'MMMM d, yyyy')}
                       </span>
                     </div>
@@ -1060,7 +1050,7 @@ export function Chat() {
                       <div
                         key={message.id}
                       id={`message-${message.id}`}
-                      className={`flex items-start gap-4 ${
+                      className={`flex items-start gap-2 sm:gap-4 ${
                         message.sender.id === user?.uid ? 'flex-row-reverse' : ''
                       }`}
                       >
@@ -1070,7 +1060,7 @@ export function Chat() {
                           <img
                             src={userProfiles[message.sender.id]?.avatar || message.sender.avatar}
                             alt={userProfiles[message.sender.id]?.name || message.sender.name}
-                            className="w-8 h-8 rounded-full object-cover border-2 border-white shadow-sm"
+                            className="w-6 h-6 sm:w-8 sm:h-8 rounded-full object-cover border-2 border-white shadow-sm"
                             onError={(e) => {
                               if (e.currentTarget instanceof HTMLImageElement) {
                                 e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(userProfiles[message.sender.id]?.name || message.sender.name)}&background=random&size=32`;
@@ -1078,8 +1068,8 @@ export function Chat() {
                             }}
                             />
                           ) : (
-                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary-50 to-primary-100 flex items-center justify-center border-2 border-white shadow-sm">
-                              <span className="text-sm font-semibold text-primary-600">
+                          <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-gradient-to-br from-primary-50 to-primary-100 flex items-center justify-center border-2 border-white shadow-sm">
+                            <span className="text-xs sm:text-sm font-semibold text-primary-600">
                               {(userProfiles[message.sender.id]?.name || message.sender.name).charAt(0).toUpperCase()}
                               </span>
                             </div>
@@ -1087,14 +1077,14 @@ export function Chat() {
                         </div>
 
                         {/* Message Content */}
-                      <div className={`group relative max-w-[65%]`}>
+                      <div className={`group relative max-w-[80%] sm:max-w-[65%]`}>
                         {message.sender.id !== user?.uid && (
-                          <p className="text-xs font-medium text-gray-500 mb-1.5 ml-1">
+                          <p className="text-xs font-medium text-gray-500 mb-1 ml-1">
                             {userProfiles[message.sender.id]?.name || message.sender.name}
                           </p>
                         )}
                         <div
-                          className={`relative rounded-2xl px-5 py-3 ${
+                          className={`relative rounded-2xl px-4 sm:px-5 py-2 sm:py-3 ${
                             message.sender.id === user?.uid
                               ? 'bg-primary-100 text-primary-900 border border-primary-200'
                               : 'bg-white text-gray-900 border border-gray-100'
@@ -1102,7 +1092,7 @@ export function Chat() {
                         >
                           {/* Reply Preview */}
                           {message.replyTo && (
-                            <div className={`mb-3 p-3 rounded-xl text-sm ${
+                            <div className={`mb-2 sm:mb-3 p-2 sm:p-3 rounded-xl text-xs sm:text-sm ${
                               message.sender.id === user?.uid
                                 ? 'bg-primary-50/70 border border-primary-200'
                                 : 'bg-gray-50/70 border border-gray-200'
@@ -1112,107 +1102,77 @@ export function Chat() {
                             </div>
                           )}
 
-                          <p className="whitespace-pre-wrap text-sm leading-relaxed">{message.content}</p>
+                          {/* Message Text */}
+                          <div className="text-sm sm:text-base whitespace-pre-wrap break-words">
+                            {message.content}
+                          </div>
                           
-                          {/* Image Attachments */}
+                          {/* Attachments */}
                           {message.attachments && message.attachments.length > 0 && (
-                            <div className="mt-3 space-y-3">
-                              {message.attachments.map((file, index) => (
-                                file.type.startsWith('image/') ? (
-                                  <div key={index} className="rounded-xl overflow-hidden border">
-                                    <img
-                                      src={file.url}
-                                      alt={file.name}
-                                      className="w-full h-auto max-h-[300px] object-cover"
-                                    />
-                                  </div>
-                                ) : null
+                            <div className="mt-3 flex flex-wrap gap-2">
+                              {message.attachments.map((attachment, index) => (
+                                <a
+                                  key={index}
+                                  href={attachment.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="block"
+                                >
+                                  <img
+                                    src={attachment.url}
+                                    alt={`Attachment ${index + 1}`}
+                                    className="max-w-[200px] max-h-[200px] rounded-lg"
+                                  />
+                                </a>
                               ))}
                             </div>
                           )}
 
                           {/* Reactions */}
                           {message.reactions && message.reactions.length > 0 && (
-                            <div className="absolute -bottom-3 right-2 flex -space-x-1 bg-white rounded-full px-2 py-1 shadow-sm border border-gray-100">
-                              {Array.from(new Set(message.reactions?.map((r: { emoji: string }) => r.emoji) || [])).map((emoji, index) => {
-                                const count = message.reactions?.filter((r: { emoji: string }) => r.emoji === emoji).length || 0;
-                                const hasReacted = message.reactions?.some(
-                                  (r: { emoji: string; userId: string }) => 
-                                    r.emoji === emoji && r.userId === user?.uid
-                                ) || false;
-                                
-                                return (
-                                  <button
-                                    key={index}
-                                    onClick={() => handleAddReaction(message.id, emoji)}
-                                    className={`text-sm hover:scale-110 transition-transform cursor-pointer px-1 rounded ${
-                                      hasReacted ? 'bg-primary-50' : ''
-                                    }`}
-                                    title={`${count} ${count === 1 ? 'reaction' : 'reactions'}`}
+                            <div className="absolute -bottom-3 left-4 flex -space-x-1">
+                              {Object.entries(
+                                message.reactions.reduce((acc: Record<string, string[]>, reaction) => {
+                                  if (!acc[reaction.emoji]) {
+                                    acc[reaction.emoji] = [];
+                                  }
+                                  acc[reaction.emoji].push(reaction.userId);
+                                  return acc;
+                                }, {})
+                              ).map(([emoji, users]) => (
+                                <div
+                                  key={emoji}
+                                  className="px-2 py-1 bg-white rounded-full shadow-sm border text-xs flex items-center gap-1"
                                   >
                                     <span>{emoji}</span>
-                                    {count > 1 && (
-                                      <span className="ml-1 text-xs text-gray-500">{count}</span>
-                                    )}
-                                  </button>
-                                );
-                              })}
+                                  <span className="text-gray-500">{users.length}</span>
+                                </div>
+                              ))}
                             </div>
                           )}
-
-                          {/* Message Status & Time */}
-                          <div className={`flex items-center gap-2 mt-2 ${
-                            message.sender.id === user?.uid ? 'justify-end' : 'justify-start'
-                          }`}>
-                            <span className={`text-xs ${
-                              message.sender.id === user?.uid 
-                                ? 'text-primary-600' 
-                                : 'text-gray-400'
-                            }`}>
-                              {format(new Date(message.createdAt), 'HH:mm')}
-                            </span>
-                            
-                            {message.sender.id === user?.uid && (
-                              <span className="text-xs text-gray-400 flex items-center gap-0.5">
-                                {message.status === 'read' ? (
-                                  <>
-                                    <CheckIcon className="w-3 h-3 text-primary-500" />
-                                    <CheckIcon className="w-3 h-3 text-primary-500 -ml-1" />
-                                  </>
-                                ) : message.status === 'delivered' ? (
-                                  <>
-                                    <CheckIcon className="w-3 h-3 text-gray-400" />
-                                    <CheckIcon className="w-3 h-3 text-gray-400 -ml-1" />
-                                  </>
-                                ) : (
-                                  <CheckIcon className="w-3 h-3 text-gray-400" />
-                                )}
-                            </span>
-                            )}
-                          </div>
                         </div>
 
                         {/* Message Actions */}
                         <div className={`absolute top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity ${
-                          message.sender.id === user?.uid ? '-left-28' : '-right-28'
+                          message.sender.id === user?.uid ? '-left-24 sm:-left-28' : '-right-24 sm:-right-28'
                         }`}>
-                          <div className="flex items-center gap-2 bg-white rounded-xl shadow-sm border p-1.5">
+                          <div className="flex items-center gap-1 sm:gap-2 bg-white rounded-xl shadow-sm border p-1 sm:p-1.5">
                             <button
                               onClick={() => setReplyingTo(message)}
-                              className="p-1.5 rounded-lg hover:bg-gray-100"
+                              className="p-1 sm:p-1.5 rounded-lg hover:bg-gray-100"
                               title="Reply"
                             >
-                              <ArrowUturnLeftIcon className="w-4 h-4 text-gray-500" />
+                              <ArrowUturnLeftIcon className="w-3 h-3 sm:w-4 sm:h-4 text-gray-500" />
                             </button>
-                            <div className="flex items-center gap-1">
+                            <div className="flex items-center gap-0.5 sm:gap-1">
                               {['👍', '❤️', '😊', '🎉', '👏', '🚀'].map((emoji) => (
                                 <button
                                   key={emoji}
                                   onClick={() => handleAddReaction(message.id, emoji)}
-                                  className="p-1.5 rounded-lg hover:bg-gray-100"
+                                  className="p-1 sm:p-1.5 rounded-lg hover:bg-gray-100"
                                   title={`React with ${emoji}`}
                                 >
-                                  <span className="text-sm">{emoji}</span>
+                                  <span className="text-xs sm:text-sm">{emoji}</span>
                                 </button>
                               ))}
                             </div>
@@ -1227,29 +1187,29 @@ export function Chat() {
               </div>
 
               {/* Message Input */}
-            <div className="px-6 py-4 border-t flex-shrink-0">
+            <div className="sticky bottom-0 z-20 w-full px-3 sm:px-6 py-2 sm:py-4 border-t flex-shrink-0 bg-white">
               {/* Reply Preview */}
               {replyingTo && (
-                <div className="mb-4 p-4 bg-gray-50 rounded-xl border flex items-center justify-between">
+                <div className="mb-2 sm:mb-3 p-2 sm:p-3 bg-gray-50 rounded-xl border flex items-center justify-between">
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900">
+                    <p className="text-xs sm:text-sm font-medium text-gray-900">
                       Replying to {replyingTo.sender.name}
                     </p>
-                    <p className="text-sm text-gray-500 truncate">{replyingTo.content}</p>
+                    <p className="text-xs sm:text-sm text-gray-500 truncate">{replyingTo.content}</p>
                   </div>
                   <button
                     onClick={() => setReplyingTo(null)}
                     className="text-gray-400 hover:text-gray-600"
                   >
-                    <XMarkIcon className="w-5 h-5" />
+                    <XMarkIcon className="w-4 h-4 sm:w-5 sm:h-5" />
                   </button>
                 </div>
               )}
               
-              <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-2 sm:gap-3">
                 {/* Image Previews */}
                 {attachments.length > 0 && (
-                  <div className="flex gap-3 overflow-x-auto">
+                  <div className="flex gap-2 overflow-x-auto pb-2">
                     {attachments.map((file, index) => (
                       <div
                         key={index}
@@ -1258,13 +1218,13 @@ export function Chat() {
                         <img
                           src={URL.createObjectURL(file)}
                           alt={file.name}
-                          className="w-20 h-20 object-cover"
+                          className="w-16 h-16 sm:w-20 sm:h-20 object-cover"
                         />
                         <button
                           onClick={() => setAttachments(prev => prev.filter((_, i) => i !== index))}
                           className="absolute top-1 right-1 p-1 rounded-full bg-black/50 text-white opacity-0 group-hover:opacity-100 transition-opacity"
                         >
-                          <XMarkIcon className="w-4 h-4" />
+                          <XMarkIcon className="w-3 h-3 sm:w-4 sm:h-4" />
                         </button>
                       </div>
                     ))}
@@ -1272,22 +1232,51 @@ export function Chat() {
                 )}
 
                 {/* Input Area */}
-                <div className="flex items-center gap-3">
-                  <textarea
-                    ref={textareaRef}
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        handleSendMessage();
-                      }
-                    }}
-                    placeholder="Type a message..."
-                    className="flex-1 px-5 py-3 rounded-2xl border focus:ring-2 focus:ring-primary-500 focus:border-primary-500 resize-none bg-gray-50"
-                    rows={1}
-                  />
-                  <div className="flex gap-2">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <div className="flex-1 relative flex items-center">
+                    <textarea
+                      ref={textareaRef}
+                      value={newMessage}
+                      onChange={(e) => {
+                        setNewMessage(e.target.value);
+                        // Check if content needs multiple lines
+                        const lines = e.target.value.split('\n');
+                        const hasMultipleLines = lines.some(line => 
+                          e.target.scrollWidth > e.target.clientWidth || lines.length > 1
+                        );
+                        
+                        if (hasMultipleLines) {
+                          const maxHeight = 116;
+                          e.target.style.height = `${Math.min(e.target.scrollHeight, maxHeight)}px`;
+                        }
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault();
+                          handleSendMessage();
+                        }
+                      }}
+                      placeholder="Type a message..."
+                      className="w-full h-[40px] sm:h-[46px] max-h-[116px] px-4 pr-12 rounded-2xl border focus:outline-none focus:border-primary-500 resize-none bg-gray-50 text-sm pt-[10px] pb-[10px] sm:pt-[13px] sm:pb-[13px] overflow-hidden"
+                      rows={1}
+                    />
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center">
+                      <button
+                        onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                        className="w-[36px] h-[36px] sm:w-[40px] sm:h-[40px] p-0 flex items-center justify-center hover:bg-gray-100 rounded-full"
+                      >
+                        <FaceSmileIcon className="w-5 h-5 text-gray-400 hover:text-gray-600" />
+                      </button>
+                      {showEmojiPicker && (
+                        <div className="absolute bottom-full right-0 mb-2 z-50">
+                          <div className="bg-white rounded-lg shadow-lg">
+                            <EmojiPicker onEmojiClick={onEmojiClick} />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex gap-1.5 sm:gap-2 self-end">
                     <input
                       type="file"
                       ref={fileInputRef}
@@ -1300,54 +1289,34 @@ export function Chat() {
                       variant="outline"
                       onClick={() => fileInputRef.current?.click()}
                       disabled={isUploading}
-                      className="rounded-2xl min-w-[46px] h-[46px] p-0 flex items-center justify-center"
+                      className="min-w-[40px] min-h-[40px] sm:min-w-[46px] sm:min-h-[46px] p-0 flex items-center justify-center rounded-2xl"
                     >
-                      <PaperClipIcon className="w-5 h-5" />
+                      <PaperClipIcon className="w-4 h-4 sm:w-5 sm:h-5" />
                     </Button>
-                    <div className="relative">
-                      <Button
-                        variant="outline"
-                        onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                        className="rounded-2xl min-w-[46px] h-[46px] p-0 flex items-center justify-center"
-                      >
-                        <FaceSmileIcon className="w-5 h-5" />
-                      </Button>
-                      {showEmojiPicker && (
-                        <div 
-                          ref={emojiPickerRef}
-                          className="absolute bottom-full right-0 mb-2"
-                          style={{ zIndex: 50 }}
-                        >
-                          <EmojiPicker
-                            onEmojiClick={onEmojiClick}
-                            autoFocusSearch={false}
-                          />
-                        </div>
-                      )}
-                    </div>
-                  <Button
-                    onClick={handleSendMessage}
-                      disabled={!newMessage.trim() && attachments.length === 0}
-                      className="rounded-2xl min-w-[46px] h-[46px] p-0 flex items-center justify-center"
-                  >
-                      <PaperAirplaneIcon className="w-5 h-5" />
-                  </Button>
+                    <Button
+                      variant="primary"
+                      onClick={handleSendMessage}
+                      disabled={isUploading || (!newMessage.trim() && attachments.length === 0)}
+                      className="min-w-[40px] min-h-[40px] sm:min-w-[46px] sm:min-h-[46px] p-0 flex items-center justify-center rounded-2xl"
+                    >
+                      <PaperAirplaneIcon className="w-4 h-4 sm:w-5 sm:h-5" />
+                    </Button>
                   </div>
                 </div>
-                </div>
               </div>
+            </div>
             </>
           ) : (
-          <div className="flex-1 flex items-center justify-center p-8">
-            <div className="text-center">
-              <div className="text-5xl mb-6">💬</div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-3">
-                Select a chat to start messaging
-              </h3>
-              <p className="text-gray-500 text-lg">
-                Choose a project or direct message from the sidebar
-              </p>
-            </div>
+            <div className="flex-1 flex items-center justify-center p-4 sm:p-8">
+              <div className="text-center">
+                <div className="text-4xl sm:text-5xl mb-4 sm:mb-6">💬</div>
+                <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2 sm:mb-3">
+                  Select a chat to start messaging
+                </h3>
+                <p className="text-sm sm:text-lg text-gray-500">
+                  Choose a project or direct message from the sidebar
+                </p>
+              </div>
             </div>
           )}
         </Card>

@@ -26,6 +26,9 @@ import { RoleModal } from '@/pages/app/pages/Projects/components/modals/RoleModa
 import { MilestoneModal } from '@/pages/app/pages/Projects/components/modals/MilestoneModal';
 import { EditSkillsModal } from '@/pages/app/pages/Projects/components/modals/EditSkillsModal';
 import { Firestore } from 'firebase/firestore';
+import { FiArrowLeft, FiMoreHorizontal } from 'react-icons/fi';
+import { Menu, Transition } from '@headlessui/react';
+import { Fragment } from 'react';
 
 interface MemberData {
   name: string;
@@ -1534,9 +1537,22 @@ export function ProjectDetails() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-4 sm:py-8">
+      {/* Back Button */}
+      <div className="block sm:hidden mb-4">
+        <Button
+          variant="outline"
+          onClick={() => navigate('/app/projects')}
+          className="flex items-center gap-2 text-gray-600 hover:text-gray-900"
+          size="sm"
+        >
+          <FiArrowLeft className="w-4 h-4" />
+          <span className="text-sm">Back</span>
+        </Button>
+      </div>
+
       {/* Hero Section */}
-      <div className="relative h-80 rounded-xl overflow-hidden mb-8">
+      <div className="relative h-60 sm:h-80 rounded-xl overflow-hidden mb-4 sm:mb-8">
         {project.coverImage ? (
           <img
             src={project.coverImage}
@@ -1545,123 +1561,262 @@ export function ProjectDetails() {
           />
         ) : (
           <div className="w-full h-full bg-gradient-to-br from-primary-100 to-primary-200 flex items-center justify-center">
-            <span className="text-6xl">🎯</span>
+            <span className="text-4xl sm:text-5xl">🎯</span>
           </div>
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
         
         {/* Project Info Overlay */}
-        <div className="absolute bottom-0 left-0 right-0 p-8 text-white">
-          <div className="flex items-center gap-4 mb-4">
+        <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-6 text-white">
+          <div className="flex flex-wrap items-center gap-2.5 sm:gap-4 mb-2.5 sm:mb-4">
             <ProjectStatus status={getProjectDisplayStatus(project?.status)} />
-            <span className="text-sm">•</span>
-            <span className="px-3 py-1 text-xs backdrop-blur-xl bg-white/20 border border-white/20 text-white rounded-full capitalize">
+            <span className="hidden sm:inline text-sm">•</span>
+            <span className="px-2.5 sm:px-3 py-1 sm:py-1.5 text-sm backdrop-blur-xl bg-white/20 border border-white/20 text-white rounded-full capitalize">
               {project.category}
             </span>
-            <span className="text-sm">•</span>
-            <span className="px-3 py-1 text-xs backdrop-blur-xl bg-white/20 border border-white/20 text-white rounded-full capitalize">
+            <span className="hidden sm:inline text-sm">•</span>
+            <span className="px-2.5 sm:px-3 py-1 sm:py-1.5 text-sm backdrop-blur-xl bg-white/20 border border-white/20 text-white rounded-full capitalize">
               {project.phase} Phase
             </span>
           </div>
-          <h1 className="text-4xl font-bold mb-2">{project.title}</h1>
-          <p className="text-lg text-gray-100 mb-4">{project.shortDescription}</p>
-          <div className="flex items-center gap-4">
+          <h1 className="text-lg sm:text-4xl font-bold mb-2 sm:mb-3">{project.title}</h1>
+          <p className="text-sm sm:text-lg text-gray-100 mb-2.5 sm:mb-4">{project.shortDescription}</p>
+          <div className="flex flex-wrap items-center gap-2.5 sm:gap-4 text-sm">
             <div className="flex items-center gap-2">
               {ownerData?.avatar ? (
                 <img
                   src={ownerData.avatar}
                   alt={ownerData.name}
-                  className="w-8 h-8 rounded-full object-cover"
+                  className="w-5 h-5 sm:w-8 sm:h-8 rounded-full object-cover"
                 />
               ) : (
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary-100 to-primary-200 flex items-center justify-center">
-                  <span className="text-sm text-white">
+                <div className="w-5 h-5 sm:w-8 sm:h-8 rounded-full bg-gradient-to-br from-primary-100 to-primary-200 flex items-center justify-center">
+                  <span className="text-xs sm:text-sm text-white">
                     {(ownerData?.name || project?.owner?.name || 'U').charAt(0).toUpperCase()}
                   </span>
                 </div>
               )}
-              <span className="text-sm">Created by {ownerData?.name || project?.owner?.name || 'Unknown User'}</span>
+              <span className="text-xs sm:text-sm">Created by {ownerData?.name || project?.owner?.name || 'Unknown User'}</span>
             </div>
-            <span className="text-sm">•</span>
-            <span className="text-sm">
+            <span className="hidden sm:inline text-sm">•</span>
+            <span className="text-xs sm:text-sm">
               Created {new Date(project.createdAt).toLocaleDateString()}
             </span>
           </div>
         </div>
-        </div>
+      </div>
 
       {/* Action Buttons */}
-      <div className="flex justify-end gap-4 mb-8">
+      <div className="flex justify-end gap-2 sm:gap-4 mb-4 sm:mb-8">
         {!hasProjectAccess && (
           <>
             {joinRequestStatus === 'pending' ? (
-              <Button disabled variant="outline">
+              <Button disabled variant="outline" size="sm" className="text-xs sm:text-base px-3 py-1.5 sm:px-4 sm:py-2">
                 Request Pending
               </Button>
             ) : joinRequestStatus === 'rejected' ? (
-              <Button disabled variant="outline">
+              <Button disabled variant="outline" size="sm" className="text-xs sm:text-base px-3 py-1.5 sm:px-4 sm:py-2">
                 Request Rejected
               </Button>
             ) : (
-          <Button onClick={() => setShowJoinModal(true)} variant="primary">
+              <Button onClick={() => setShowJoinModal(true)} variant="primary" size="sm" className="text-xs sm:text-base px-3 py-1.5 sm:px-4 sm:py-2">
                 Join Project
               </Button>
             )}
           </>
         )}
-        <Button onClick={handleShare} variant="outline">
-                Share Project
-              </Button>
-            </div>
+        <Button onClick={handleShare} variant="outline" size="sm" className="text-xs sm:text-base px-3 py-1.5 sm:px-4 sm:py-2">
+          Share Project
+        </Button>
+      </div>
 
       {/* Join Requests Section */}
       {renderJoinRequests()}
 
-      {/* Navigation Tabs */}
-      {hasProjectAccess ? renderPreviewTabs() : renderPreviewTabs()}
+      {/* Mobile Tab Menu */}
+      <div className="block sm:hidden mb-4">
+        <div className="flex overflow-x-auto border-b border-gray-200 hide-scrollbar">
+          <button
+            onClick={() => setActiveTab('overview')}
+            className={`shrink-0 px-4 py-2 text-sm font-medium border-b-2 ${
+              activeTab === 'overview'
+                ? 'text-primary-600 border-primary-600'
+                : 'text-gray-500 border-transparent hover:text-gray-700'
+            }`}
+          >
+            Overview
+          </button>
+          <button
+            onClick={() => setActiveTab('team')}
+            className={`shrink-0 px-4 py-2 text-sm font-medium border-b-2 ${
+              activeTab === 'team'
+                ? 'text-primary-600 border-primary-600'
+                : 'text-gray-500 border-transparent hover:text-gray-700'
+            }`}
+          >
+            Team
+          </button>
+          {hasProjectAccess && (
+            <>
+              <button
+                onClick={() => setActiveTab('tasks')}
+                className={`shrink-0 px-4 py-2 text-sm font-medium border-b-2 ${
+                  activeTab === 'tasks'
+                    ? 'text-primary-600 border-primary-600'
+                    : 'text-gray-500 border-transparent hover:text-gray-700'
+                }`}
+              >
+                Tasks
+              </button>
+              <button
+                onClick={() => setActiveTab('communication')}
+                className={`shrink-0 px-4 py-2 text-sm font-medium border-b-2 ${
+                  activeTab === 'communication'
+                    ? 'text-primary-600 border-primary-600'
+                    : 'text-gray-500 border-transparent hover:text-gray-700'
+                }`}
+              >
+                Chat
+              </button>
+              <button
+                onClick={() => setActiveTab('resources')}
+                className={`shrink-0 px-4 py-2 text-sm font-medium border-b-2 ${
+                  activeTab === 'resources'
+                    ? 'text-primary-600 border-primary-600'
+                    : 'text-gray-500 border-transparent hover:text-gray-700'
+                }`}
+              >
+                Files
+              </button>
+              {isProjectOwner && (
+                <button
+                  onClick={() => setActiveTab('settings')}
+                  className={`shrink-0 px-4 py-2 text-sm font-medium border-b-2 ${
+                    activeTab === 'settings'
+                      ? 'text-primary-600 border-primary-600'
+                      : 'text-gray-500 border-transparent hover:text-gray-700'
+                  }`}
+                >
+                  Settings
+                </button>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Desktop Tab Menu */}
+      <div className="hidden sm:flex gap-8 mb-8 border-b border-gray-200">
+        <button
+          onClick={() => setActiveTab('overview')}
+          className={`pb-4 text-sm font-medium ${
+            activeTab === 'overview'
+              ? 'text-primary-600 border-b-2 border-primary-600'
+              : 'text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          Overview
+        </button>
+        <button
+          onClick={() => setActiveTab('team')}
+          className={`pb-4 text-sm font-medium ${
+            activeTab === 'team'
+              ? 'text-primary-600 border-b-2 border-primary-600'
+              : 'text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          Team
+        </button>
+        {hasProjectAccess && (
+          <>
+            <button
+              onClick={() => setActiveTab('communication')}
+              className={`pb-4 text-sm font-medium ${
+                activeTab === 'communication'
+                  ? 'text-primary-600 border-b-2 border-primary-600'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              Communication
+            </button>
+            <button
+              onClick={() => setActiveTab('resources')}
+              className={`pb-4 text-sm font-medium ${
+                activeTab === 'resources'
+                  ? 'text-primary-600 border-b-2 border-primary-600'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              Resources
+            </button>
+            <button
+              onClick={() => setActiveTab('tasks')}
+              className={`pb-4 text-sm font-medium ${
+                activeTab === 'tasks'
+                  ? 'text-primary-600 border-b-2 border-primary-600'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              Tasks
+            </button>
+            {isProjectOwner && (
+              <button
+                onClick={() => setActiveTab('settings')}
+                className={`pb-4 text-sm font-medium ${
+                  activeTab === 'settings'
+                    ? 'text-primary-600 border-b-2 border-primary-600'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Settings
+              </button>
+            )}
+          </>
+        )}
+      </div>
 
       {/* Main Content */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        <div className="md:col-span-2">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-8">
+        <div className="lg:col-span-2">
           {renderSpaceContent()}
         </div>
 
         {/* Sidebar */}
-        <div className="space-y-6">
+        <div className="space-y-3 sm:space-y-6">
           <Card>
-            <div className="p-6">
-              <h3 className="font-medium mb-4">Project Details</h3>
-              <div className="space-y-4">
+            <div className="p-3 sm:p-6">
+              <h3 className="text-sm sm:text-base font-medium mb-2 sm:mb-4">Project Details</h3>
+              <div className="space-y-2 sm:space-y-4">
                 <div>
-                  <p className="text-sm text-gray-500 mb-1">Category</p>
-                  <p className="font-medium capitalize">{project.category}</p>
+                  <p className="text-xs text-gray-500 mb-0.5">Category</p>
+                  <p className="text-sm font-medium capitalize">{project.category}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500 mb-1">Phase</p>
-                  <p className="font-medium capitalize">{project.phase}</p>
+                  <p className="text-xs text-gray-500 mb-0.5">Phase</p>
+                  <p className="text-sm font-medium capitalize">{project.phase}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500 mb-1">Status</p>
-                  <p className="font-medium capitalize">{project.status}</p>
+                  <p className="text-xs text-gray-500 mb-0.5">Status</p>
+                  <p className="text-sm font-medium capitalize">{project.status}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500 mb-1">Visibility</p>
-                  <p className="font-medium capitalize">{project.visibility}</p>
+                  <p className="text-xs text-gray-500 mb-0.5">Visibility</p>
+                  <p className="text-sm font-medium capitalize">{project.visibility}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500 mb-1">Created</p>
-                  <p className="font-medium">
+                  <p className="text-xs text-gray-500 mb-0.5">Created</p>
+                  <p className="text-sm font-medium">
                     {new Date(project.createdAt).toLocaleDateString()}
                   </p>
                 </div>
                 {project.websiteUrl && (
                   <div>
-                    <p className="text-sm text-gray-500 mb-1">Website</p>
+                    <p className="text-xs text-gray-500 mb-0.5">Website</p>
                     <a
                       href={project.websiteUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-primary-600 hover:text-primary-700 break-all"
+                      className="text-sm text-primary-600 hover:text-primary-700 break-all"
                     >
                       {project.websiteUrl}
                     </a>
@@ -1673,17 +1828,17 @@ export function ProjectDetails() {
 
           {/* Quick Stats */}
           <Card className="overflow-hidden">
-            <div className="border-b border-gray-100 bg-gray-50/50 px-6 py-4">
-              <h2 className="text-lg font-semibold text-gray-900">Project Stats</h2>
+            <div className="border-b border-gray-100 bg-gray-50/50 px-3 sm:px-6 py-3 sm:py-4">
+              <h2 className="text-sm sm:text-base font-medium text-gray-900">Project Stats</h2>
             </div>
-            <div className="p-6 space-y-6">
+            <div className="p-3 sm:p-6 space-y-3 sm:space-y-6">
               {/* Team Members */}
               <div>
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-medium text-gray-900">Team Members</h3>
-                  <span className="text-xs text-gray-500">{project?.members.length} members</span>
+                <div className="flex items-center justify-between mb-2 sm:mb-3">
+                  <h3 className="text-xs sm:text-sm font-medium text-gray-900">Team Members</h3>
+                  <span className="text-[10px] sm:text-xs text-gray-500">{project?.members.length} members</span>
                 </div>
-                <div className="flex -space-x-2 overflow-hidden">
+                <div className="flex -space-x-1.5 sm:-space-x-2 overflow-hidden">
                   {project?.members.slice(0, 5).map((member, index) => {
                     const memberData = membersData[member.id];
                     return (
@@ -1692,11 +1847,11 @@ export function ProjectDetails() {
                           <img
                             src={memberData.avatar}
                             alt={memberData.name}
-                            className="w-8 h-8 rounded-full border-2 border-white"
+                            className="w-6 h-6 sm:w-8 sm:h-8 rounded-full border-2 border-white"
                           />
                         ) : (
-                          <div className="w-8 h-8 rounded-full border-2 border-white bg-primary-100 flex items-center justify-center">
-                            <span className="text-sm text-primary-700">
+                          <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full border-2 border-white bg-primary-100 flex items-center justify-center">
+                            <span className="text-xs sm:text-sm text-primary-700">
                               {(memberData?.name || member.name || 'U').charAt(0).toUpperCase()}
                             </span>
                           </div>
@@ -1705,77 +1860,29 @@ export function ProjectDetails() {
                     );
                   })}
                   {project?.members.length > 5 && (
-                    <div className="w-8 h-8 rounded-full border-2 border-white bg-gray-100 flex items-center justify-center">
-                      <span className="text-xs text-gray-600">+{project.members.length - 5}</span>
+                    <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full border-2 border-white bg-gray-100 flex items-center justify-center">
+                      <span className="text-[10px] sm:text-xs text-gray-600">+{project.members.length - 5}</span>
                     </div>
                   )}
                 </div>
               </div>
 
-              {/* Project Phase */}
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-medium text-gray-900">Project Phase</h3>
-                  <span className="text-xs font-medium text-primary-600 bg-primary-50 px-2 py-1 rounded-full capitalize">
-                    {project?.phase}
-                  </span>
-                </div>
-                <div className="relative">
-                  <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-primary-500 rounded-full transition-all duration-300"
-                      style={{ 
-                        width: `${
-                          project?.phase === 'idea' ? 20 :
-                          project?.phase === 'prototype' ? 40 :
-                          project?.phase === 'development' ? 60 :
-                          project?.phase === 'growth' ? 80 :
-                          project?.phase === 'maintenance' ? 100 : 0
-                        }%` 
-                      }}
-                    />
-                  </div>
-                  <div className="mt-4 grid grid-cols-5 gap-2">
-                    <div className="text-center">
-                      <div className={`w-3 h-3 rounded-full mx-auto mb-2 border ${project?.phase === 'idea' ? 'bg-primary-500 border-primary-500' : 'bg-gray-100 border-gray-200'}`} />
-                      <span className="text-[10px] leading-tight text-gray-600 block">Idea</span>
-                    </div>
-                    <div className="text-center">
-                      <div className={`w-3 h-3 rounded-full mx-auto mb-2 border ${project?.phase === 'prototype' ? 'bg-primary-500 border-primary-500' : 'bg-gray-100 border-gray-200'}`} />
-                      <span className="text-[10px] leading-tight text-gray-600 block">Proto</span>
-                    </div>
-                    <div className="text-center">
-                      <div className={`w-3 h-3 rounded-full mx-auto mb-2 border ${project?.phase === 'development' ? 'bg-primary-500 border-primary-500' : 'bg-gray-100 border-gray-200'}`} />
-                      <span className="text-[10px] leading-tight text-gray-600 block">Dev</span>
-                    </div>
-                    <div className="text-center">
-                      <div className={`w-3 h-3 rounded-full mx-auto mb-2 border ${project?.phase === 'growth' ? 'bg-primary-500 border-primary-500' : 'bg-gray-100 border-gray-200'}`} />
-                      <span className="text-[10px] leading-tight text-gray-600 block">Growth</span>
-                    </div>
-                    <div className="text-center">
-                      <div className={`w-3 h-3 rounded-full mx-auto mb-2 border ${project?.phase === 'maintenance' ? 'bg-primary-500 border-primary-500' : 'bg-gray-100 border-gray-200'}`} />
-                      <span className="text-[10px] leading-tight text-gray-600 block">Maint</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
               {/* Key Metrics */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-gray-50 rounded-lg p-4">
+              <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                <div className="bg-gray-50 rounded-lg p-3 sm:p-4">
                   <div className="flex flex-col">
-                    <span className="text-2xl font-semibold text-primary-600">
+                    <span className="text-xl sm:text-2xl font-semibold text-primary-600">
                       {project?.skills?.length || 0}
                     </span>
-                    <span className="text-sm text-gray-600 mt-1">Project Skills</span>
+                    <span className="text-xs sm:text-sm text-gray-600 mt-0.5 sm:mt-1">Project Skills</span>
+                  </div>
                 </div>
-                </div>
-                <div className="bg-gray-50 rounded-lg p-4">
+                <div className="bg-gray-50 rounded-lg p-3 sm:p-4">
                   <div className="flex flex-col">
-                    <span className="text-2xl font-semibold text-primary-600">
+                    <span className="text-xl sm:text-2xl font-semibold text-primary-600">
                       {project?.milestones?.length || 0}
                     </span>
-                    <span className="text-sm text-gray-600 mt-1">Milestones</span>
+                    <span className="text-xs sm:text-sm text-gray-600 mt-0.5 sm:mt-1">Milestones</span>
                   </div>
                 </div>
               </div>

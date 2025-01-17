@@ -167,12 +167,12 @@ export function UserProfile() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8">
+    <div className="max-w-5xl mx-auto px-4 py-4 sm:py-8">
       <Card className="overflow-hidden">
         {/* Header */}
-        <div className="p-8 pb-6 border-b border-gray-100">
-          <div className="flex items-start gap-8">
-            <div className="w-32 h-32">
+        <div className="p-4 sm:p-8 pb-4 sm:pb-6 border-b border-gray-100">
+          <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-8">
+            <div className="w-24 h-24 sm:w-32 sm:h-32">
               {user?.avatar || user?.profileImage ? (
                 <img
                   src={user.avatar || user.profileImage}
@@ -181,81 +181,81 @@ export function UserProfile() {
                 />
               ) : (
                 <div 
-                  className="w-full h-full rounded-full flex items-center justify-center text-3xl ring-4 ring-gray-50"
+                  className="w-full h-full rounded-full flex items-center justify-center text-2xl sm:text-3xl ring-4 ring-gray-50"
                   style={{ backgroundColor: user?.profileColor || '#f3f4f6' }}
                 >
                   {user?.profileEmoji || user?.fullName.charAt(0).toUpperCase()}
                 </div>
               )}
             </div>
-            <div className="flex-1 min-w-0">
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <h1 className="text-2xl font-semibold">{user?.fullName}</h1>
-                  <Button
-                    variant="outline"
-                    onClick={handleMessage}
-                    className="flex items-center gap-2 hover:bg-gray-50"
+            <div className="flex-1 min-w-0 text-center sm:text-left">
+              <div className="flex flex-col sm:flex-row justify-between items-center sm:items-start gap-4">
+                <div>
+                  <h1 className="text-xl sm:text-2xl font-semibold mb-2">{user?.fullName}</h1>
+                  <p className="text-base sm:text-lg text-gray-600 mb-4">{user?.professionalTitle}</p>
+                  <div className="flex flex-wrap justify-center sm:justify-start items-center gap-3 sm:gap-6">
+                    {user?.country && (
+                      <div className="flex items-center gap-2">
+                        <CountryDisplay country={user.country} />
+                      </div>
+                    )}
+                    {user?.experienceLevel && (
+                      <div className="flex items-center gap-2 text-gray-600">
+                        <span className="w-1.5 h-1.5 rounded-full bg-gray-400"></span>
+                        <span className="text-sm">
+                          {user.experienceLevel} experience
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={handleMessage}
+                  className="flex items-center gap-2 hover:bg-gray-50 w-full sm:w-auto"
+                >
+                  <svg 
+                    xmlns="http://www.w3.org/2000/svg" 
+                    width="20" 
+                    height="20" 
+                    viewBox="0 0 24 24" 
+                    fill="none" 
+                    stroke="currentColor" 
+                    strokeWidth="2" 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round"
                   >
-                    <svg 
-                      xmlns="http://www.w3.org/2000/svg" 
-                      width="20" 
-                      height="20" 
-                      viewBox="0 0 24 24" 
-                      fill="none" 
-                      stroke="currentColor" 
-                      strokeWidth="2" 
-                      strokeLinecap="round" 
-                      strokeLinejoin="round"
-                    >
-                      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-                    </svg>
-                    <span>Send Message</span>
-                  </Button>
-                </div>
-                <p className="text-gray-600 text-lg mb-4">{user?.professionalTitle}</p>
-                <div className="flex items-center gap-6">
-                  {user?.country && (
-                    <div className="flex items-center gap-2">
-                      <CountryDisplay country={user.country} />
-                    </div>
-                  )}
-                  {user?.experienceLevel && (
-                    <div className="flex items-center gap-2 text-gray-600">
-                      <span className="w-1.5 h-1.5 rounded-full bg-gray-400"></span>
-                      <span className="text-sm">
-                        {user.experienceLevel} experience
-                      </span>
-                    </div>
-                  )}
-                </div>
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                  </svg>
+                  <span>Send Message</span>
+                </Button>
               </div>
             </div>
           </div>
         </div>
 
         {/* Basic Information */}
-        <div className="p-8 space-y-8">
+        <div className="p-4 sm:p-8 space-y-6 sm:space-y-8">
           <div>
-            <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Basic Information</h3>
-            <Card className="p-6 space-y-6 bg-gray-50/50">
+            <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3 sm:mb-4">Basic Information</h3>
+            <Card className="p-4 sm:p-6 space-y-4 sm:space-y-6 bg-gray-50/50">
               {user.bio && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Bio</label>
-                  <div className="text-gray-600 leading-relaxed">{user.bio}</div>
+                  <div className="text-sm sm:text-base text-gray-600 leading-relaxed">{user.bio}</div>
                 </div>
               )}
-              <div className="grid grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                 {user.yearsOfExperience && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Experience</label>
-                    <div className="text-gray-600">{user.yearsOfExperience} years</div>
+                    <div className="text-sm sm:text-base text-gray-600">{user.yearsOfExperience} years</div>
                   </div>
                 )}
                 {user.timezone && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Timezone</label>
-                    <div className="text-gray-600">{user.timezone}</div>
+                    <div className="text-sm sm:text-base text-gray-600">{user.timezone}</div>
                   </div>
                 )}
               </div>
@@ -264,16 +264,16 @@ export function UserProfile() {
 
           {/* Skills & Preferences */}
           <div>
-            <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Skills & Preferences</h3>
-            <Card className="p-6 space-y-6 bg-gray-50/50">
+            <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3 sm:mb-4">Skills & Preferences</h3>
+            <Card className="p-4 sm:p-6 space-y-4 sm:space-y-6 bg-gray-50/50">
               {user.skills && user.skills.length > 0 && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-3">Skills</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2 sm:mb-3">Skills</label>
                   <div className="flex flex-wrap gap-2">
                     {user.skills.map((skill: string) => (
                       <span
                         key={skill}
-                        className="px-3 py-1.5 bg-white shadow-sm border border-gray-200 rounded-full text-sm font-medium text-gray-700"
+                        className="px-2 sm:px-3 py-1 sm:py-1.5 bg-white shadow-sm border border-gray-200 rounded-full text-xs sm:text-sm font-medium text-gray-700"
                       >
                         {skill}
                       </span>
@@ -284,12 +284,12 @@ export function UserProfile() {
 
               {user.projectPreferences && user.projectPreferences.length > 0 && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-3">Project Preferences</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2 sm:mb-3">Project Preferences</label>
                   <div className="flex flex-wrap gap-2">
                     {user.projectPreferences.map((pref: string) => (
                       <span
                         key={pref}
-                        className="px-3 py-1.5 bg-blue-50 border border-blue-100 text-blue-700 rounded-full text-sm font-medium"
+                        className="px-2 sm:px-3 py-1 sm:py-1.5 bg-blue-50 border border-blue-100 text-blue-700 rounded-full text-xs sm:text-sm font-medium"
                       >
                         {pref}
                       </span>
@@ -298,32 +298,32 @@ export function UserProfile() {
                 </div>
               )}
 
-              {user.collaborationStyles && user.collaborationStyles.length > 0 && (
+              {user.languages && user.languages.length > 0 && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-3">Collaboration Style</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2 sm:mb-3">Languages</label>
                   <div className="flex flex-wrap gap-2">
-                    {user.collaborationStyles.map((style: string) => (
+                    {user.languages.map((lang: string) => (
                       <span
-                        key={style}
-                        className="px-3 py-1.5 bg-green-50 border border-green-100 text-green-700 rounded-full text-sm font-medium"
+                        key={lang}
+                        className="px-2 sm:px-3 py-1 sm:py-1.5 bg-purple-50 border border-purple-100 text-purple-700 rounded-full text-xs sm:text-sm font-medium"
                       >
-                        {style}
+                        {lang}
                       </span>
                     ))}
                   </div>
                 </div>
               )}
 
-              {user.languages && user.languages.length > 0 && (
+              {user.collaborationPreferences && user.collaborationPreferences.length > 0 && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-3">Languages</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2 sm:mb-3">Collaboration Style</label>
                   <div className="flex flex-wrap gap-2">
-                    {user.languages.map((lang: string) => (
+                    {user.collaborationPreferences.map((style: string) => (
                       <span
-                        key={lang}
-                        className="px-3 py-1.5 bg-purple-50 border border-purple-100 text-purple-700 rounded-full text-sm font-medium"
+                        key={style}
+                        className="px-2 sm:px-3 py-1 sm:py-1.5 bg-green-50 border border-green-100 text-green-700 rounded-full text-xs sm:text-sm font-medium"
                       >
-                        {lang}
+                        {style}
                       </span>
                     ))}
                   </div>
@@ -334,9 +334,9 @@ export function UserProfile() {
 
           {/* Additional Information */}
           <div>
-            <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Additional Information</h3>
-            <Card className="p-6 space-y-6 bg-gray-50/50">
-              <div className="grid grid-cols-2 gap-6">
+            <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3 sm:mb-4">Additional Information</h3>
+            <Card className="p-4 sm:p-6 space-y-4 sm:space-y-6 bg-gray-50/50">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                 {user.country && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Location</label>
@@ -347,14 +347,14 @@ export function UserProfile() {
                 {user.weeklyAvailability && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Weekly Availability</label>
-                    <div className="text-gray-600">{user.weeklyAvailability} hours/week</div>
+                    <div className="text-sm sm:text-base text-gray-600">{user.weeklyAvailability} hours/week</div>
                   </div>
                 )}
 
                 {user.createdAt && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Member Since</label>
-                    <div className="text-gray-600">
+                    <div className="text-sm sm:text-base text-gray-600">
                       {new Date(user.createdAt).toLocaleDateString('en-US', {
                         year: 'numeric',
                         month: 'long',
@@ -364,20 +364,6 @@ export function UserProfile() {
                   </div>
                 )}
               </div>
-            </Card>
-          </div>
-
-          {/* Portfolio Projects */}
-          <div>
-            <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Portfolio Projects</h3>
-            <Card className="p-6 bg-gray-50/50">
-              {ownedProjects.length > 0 ? (
-                <ProjectList projects={ownedProjects} />
-              ) : (
-                <div className="text-center text-gray-500">
-                  No projects to display yet
-                </div>
-              )}
             </Card>
           </div>
         </div>

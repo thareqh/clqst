@@ -44,7 +44,7 @@ function Badge({ children, color = 'gray' }: { children: React.ReactNode; color?
 }
 
 export function Dashboard() {
-  const { user } = useAuth();
+  const { user, userProfile } = useAuth();
   const navigate = useNavigate();
   const [joinRequests, setJoinRequests] = useState<ProjectJoinRequest[]>([]);
   const [unreadChats, setUnreadChats] = useState(0);
@@ -199,32 +199,30 @@ export function Dashboard() {
   }, [user]);
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-7xl">
+    <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-8 max-w-7xl">
       {/* Welcome Section */}
-      <div className="mb-8">
-        <div className="flex items-center gap-3 mb-2">
-          <h1 className="text-2xl font-semibold text-gray-900">Welcome back, {user?.displayName}</h1>
-        </div>
-        <p className="text-gray-500">Here's what's happening with your projects today</p>
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-xl sm:text-2xl font-semibold text-gray-900">Welcome back, {userProfile?.fullName || user?.displayName}</h1>
+        <p className="text-sm sm:text-base text-gray-600 mt-1">Here's what's happening with your projects</p>
       </div>
 
       {/* Quick Actions */}
-      <Card className="mb-8 overflow-hidden hover:border-primary-100 transition-colors">
-        <div className="border-b border-gray-100 bg-gray-50/50 px-6 py-4">
-          <h2 className="text-lg font-semibold text-gray-900">Quick Actions</h2>
+      <Card className="mb-6 sm:mb-8 overflow-hidden hover:border-primary-100 transition-colors">
+        <div className="border-b border-gray-100 bg-gray-50/50 px-4 sm:px-6 py-3 sm:py-4">
+          <h2 className="text-base sm:text-lg font-semibold text-gray-900">Quick Actions</h2>
         </div>
-        <div className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="p-4 sm:p-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <Button 
               variant="primary" 
-              className="w-full justify-center"
+              className="w-full justify-center text-sm sm:text-base"
               onClick={() => navigate('/app/projects/create')}
             >
               Create New Project
             </Button>
             <Button 
               variant="outline" 
-              className="w-full justify-center"
+              className="w-full justify-center text-sm sm:text-base"
               onClick={() => navigate('/app/explore')}
             >
               Browse Projects
@@ -235,9 +233,9 @@ export function Dashboard() {
 
       {/* Notifications */}
       <Card className="overflow-hidden hover:border-primary-100 transition-colors">
-        <div className="border-b border-gray-100 bg-gray-50/50 px-6 py-4">
+        <div className="border-b border-gray-100 bg-gray-50/50 px-4 sm:px-6 py-3 sm:py-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-gray-900">Notifications</h2>
+            <h2 className="text-base sm:text-lg font-semibold text-gray-900">Notifications</h2>
             {(joinRequests.length > 0 || unreadChats > 0 || myJoinRequestUpdates.length > 0) && (
               <Badge color="primary">
                 {joinRequests.length + (unreadChats || 0) + myJoinRequestUpdates.length} new
@@ -247,20 +245,20 @@ export function Dashboard() {
         </div>
 
         {joinRequests.length === 0 && !unreadChats && myJoinRequestUpdates.length === 0 ? (
-          <div className="p-8 text-center border-2 border-dashed border-gray-200 m-6 rounded-lg">
-            <div className="w-16 h-16 rounded-full bg-gray-50 flex items-center justify-center mx-auto mb-4">
-              <span className="text-3xl">📭</span>
+          <div className="p-4 sm:p-8 text-center border-2 border-dashed border-gray-200 mx-4 sm:mx-6 my-4 sm:my-6 rounded-lg">
+            <div className="w-12 sm:w-16 h-12 sm:h-16 rounded-full bg-gray-50 flex items-center justify-center mx-auto mb-3 sm:mb-4">
+              <span className="text-2xl sm:text-3xl">📭</span>
             </div>
             <h3 className="text-sm font-medium text-gray-900 mb-1">All caught up!</h3>
-            <p className="text-sm text-gray-500">No new notifications at the moment</p>
+            <p className="text-xs sm:text-sm text-gray-500">No new notifications at the moment</p>
           </div>
         ) : (
           <div className="divide-y divide-gray-100">
             {/* Join Requests */}
             {joinRequests.length > 0 && joinRequests.map((request) => (
-              <div key={request.id} className="p-6 hover:bg-gray-50/50 transition-colors">
-                <div className="flex items-start gap-4">
-                  <div className="relative">
+              <div key={request.id} className="p-4 sm:p-6 hover:bg-gray-50/50 transition-colors">
+                <div className="flex items-start gap-3 sm:gap-4">
+                  <div className="relative flex-shrink-0">
                     {(userProfiles[request.userId]?.avatar || 
                       userProfiles[request.userId]?.profileImage || 
                       userProfiles[request.userId]?.photoURL || 
@@ -271,18 +269,18 @@ export function Dashboard() {
                              userProfiles[request.userId]?.photoURL || 
                              request.user.avatar}
                         alt={userProfiles[request.userId]?.fullName || request.user.name}
-                        className="w-10 h-10 rounded-full object-cover border-2 border-white shadow-sm"
+                        className="w-8 sm:w-10 h-8 sm:h-10 rounded-full object-cover border-2 border-white shadow-sm"
                       />
                     ) : (
-                      <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center border-2 border-white shadow-sm">
-                        <span className="text-lg font-medium text-primary-700">
+                      <div className="w-8 sm:w-10 h-8 sm:h-10 rounded-full bg-primary-100 flex items-center justify-center border-2 border-white shadow-sm">
+                        <span className="text-base sm:text-lg font-medium text-primary-700">
                           {(userProfiles[request.userId]?.fullName || request.user.name).charAt(0).toUpperCase()}
                         </span>
                       </div>
                     )}
                   </div>
-                  <div className="flex-1">
-                    <p className="text-sm text-gray-900">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs sm:text-sm text-gray-900">
                       <span className="font-medium">{userProfiles[request.userId]?.fullName || request.user.name}</span> requested to join{' '}
                       <span className="font-medium">{projectNames[request.projectId] || 'Loading...'}</span>
                       {request.role && (
@@ -300,11 +298,12 @@ export function Dashboard() {
                         </>
                       )}
                     </p>
-                    <div className="mt-2 flex gap-2">
+                    <div className="mt-2 flex flex-wrap gap-2">
                       <Button 
                         variant="primary" 
                         size="sm"
                         onClick={() => navigate(`/app/projects/${request.projectId}`)}
+                        className="text-xs sm:text-sm"
                       >
                         View Request
                       </Button>
@@ -314,11 +313,11 @@ export function Dashboard() {
                         onClick={() => handleDeleteJoinRequest(request.id)}
                         className="text-gray-500 hover:text-red-500"
                       >
-                        <TrashIcon className="w-4 h-4" />
+                        <TrashIcon className="w-3 sm:w-4 h-3 sm:h-4" />
                       </Button>
                     </div>
                   </div>
-                  <span className="text-xs text-gray-500 whitespace-nowrap">
+                  <span className="text-[10px] sm:text-xs text-gray-500 whitespace-nowrap">
                     {new Date(request.createdAt).toLocaleDateString()}
                   </span>
                 </div>
@@ -327,32 +326,33 @@ export function Dashboard() {
 
             {/* My Join Request Updates */}
             {myJoinRequestUpdates.map((update) => (
-              <div key={update.id} className="p-6 hover:bg-gray-50/50 transition-colors">
-                <div className="flex items-start gap-4">
-                  <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 border-2 border-white shadow-sm"
+              <div key={update.id} className="p-4 sm:p-6 hover:bg-gray-50/50 transition-colors">
+                <div className="flex items-start gap-3 sm:gap-4">
+                  <div className="w-8 sm:w-10 h-8 sm:h-10 rounded-full flex items-center justify-center flex-shrink-0 border-2 border-white shadow-sm"
                     style={{
                       backgroundColor: update.status === 'accepted' ? '#ecfdf5' : '#fef2f2',
                       color: update.status === 'accepted' ? '#059669' : '#dc2626'
                     }}
                   >
                     {update.status === 'accepted' ? (
-                      <CheckIcon className="w-5 h-5" />
+                      <CheckIcon className="w-4 sm:w-5 h-4 sm:h-5" />
                     ) : (
-                      <XIcon className="w-5 h-5" />
+                      <XIcon className="w-4 sm:w-5 h-4 sm:h-5" />
                     )}
                   </div>
-                  <div className="flex-1">
-                    <p className="text-sm text-gray-900">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs sm:text-sm text-gray-900">
                       Your request to join <span className="font-medium">{projectNames[update.projectId] || 'Loading...'}</span> was{' '}
                       <Badge color={update.status === 'accepted' ? 'green' : 'red'}>
                         {update.status}
                       </Badge>
                     </p>
-                    <div className="mt-2 flex gap-2">
+                    <div className="mt-2 flex flex-wrap gap-2">
                       <Button 
                         variant="outline" 
                         size="sm"
                         onClick={() => navigate(`/app/projects/${update.projectId}`)}
+                        className="text-xs sm:text-sm"
                       >
                         View Project
                       </Button>
@@ -362,11 +362,11 @@ export function Dashboard() {
                         onClick={() => handleDeleteUpdate(update.id)}
                         className="text-gray-500 hover:text-red-500"
                       >
-                        <TrashIcon className="w-4 h-4" />
+                        <TrashIcon className="w-3 sm:w-4 h-3 sm:h-4" />
                       </Button>
                     </div>
                   </div>
-                  <span className="text-xs text-gray-500 whitespace-nowrap">
+                  <span className="text-[10px] sm:text-xs text-gray-500 whitespace-nowrap">
                     {new Date(update.updatedAt).toLocaleDateString()}
                   </span>
                 </div>
@@ -375,19 +375,19 @@ export function Dashboard() {
 
             {/* Unread Chats */}
             {unreadChats > 0 && (
-              <div className="p-6 hover:bg-gray-50/50 transition-colors">
-                <div className="flex items-start gap-4">
-                  <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center flex-shrink-0 border-2 border-white shadow-sm">
-                    <ChatBubbleIcon className="w-5 h-5 text-primary-600" />
+              <div className="p-4 sm:p-6 hover:bg-gray-50/50 transition-colors">
+                <div className="flex items-start gap-3 sm:gap-4">
+                  <div className="w-8 sm:w-10 h-8 sm:h-10 rounded-full bg-primary-100 flex items-center justify-center flex-shrink-0 border-2 border-white shadow-sm">
+                    <ChatBubbleIcon className="w-4 sm:w-5 h-4 sm:h-5 text-primary-600" />
                   </div>
-                  <div className="flex-1">
-                    <p className="text-sm text-gray-900">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs sm:text-sm text-gray-900">
                       You have <Badge color="primary">{unreadChats} unread messages</Badge>
                     </p>
                     <Button 
                       variant="outline" 
                       size="sm" 
-                      className="mt-2"
+                      className="mt-2 text-xs sm:text-sm"
                       onClick={() => navigate('/app/chat')}
                     >
                       View Messages

@@ -76,16 +76,16 @@ export function Profile() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8">
+    <div className="max-w-5xl mx-auto px-4 py-4 sm:py-8">
       <Card className="overflow-hidden">
         {/* Header */}
-        <div className="p-8 pb-6 border-b border-gray-100">
-          <div className="flex items-start gap-8">
+        <div className="p-4 sm:p-8 pb-4 sm:pb-6 border-b border-gray-100">
+          <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-8">
             <div 
               className="relative group cursor-pointer" 
               onClick={() => setIsEditingPicture(true)}
             >
-              <div className="w-32 h-32">
+              <div className="w-24 h-24 sm:w-32 sm:h-32">
                 {userProfile.avatar || userProfile.profileImage ? (
                   <img
                     src={userProfile.avatar || userProfile.profileImage}
@@ -94,23 +94,23 @@ export function Profile() {
                   />
                 ) : (
                   <div 
-                    className="w-full h-full rounded-full flex items-center justify-center text-3xl ring-4 ring-gray-50"
+                    className="w-full h-full rounded-full flex items-center justify-center text-2xl sm:text-3xl ring-4 ring-gray-50"
                     style={{ backgroundColor: userProfile.profileColor || '#f3f4f6' }}
                   >
                     {userProfile.profileEmoji || userProfile.fullName.charAt(0).toUpperCase()}
                   </div>
                 )}
-              </div>
-              <div className="absolute inset-0 bg-black/20 rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                <span className="text-white text-sm font-medium">Change Photo</span>
+                <div className="absolute inset-0 bg-black/20 rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <span className="text-white text-xs sm:text-sm font-medium">Change Photo</span>
+                </div>
               </div>
             </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex justify-between items-start gap-4">
+            <div className="flex-1 min-w-0 text-center sm:text-left">
+              <div className="flex flex-col sm:flex-row justify-between items-center sm:items-start gap-4">
                 <div>
-                  <h1 className="text-2xl font-semibold mb-2">{userProfile.fullName}</h1>
-                  <p className="text-gray-600 text-lg mb-4">{userProfile.professionalTitle}</p>
-                  <div className="flex items-center gap-6">
+                  <h1 className="text-xl sm:text-2xl font-semibold mb-2">{userProfile.fullName}</h1>
+                  <p className="text-base sm:text-lg text-gray-600 mb-4">{userProfile.professionalTitle}</p>
+                  <div className="flex flex-wrap justify-center sm:justify-start items-center gap-3 sm:gap-6">
                     {userProfile.country && (
                       <div className="flex items-center gap-2">
                         <CountryDisplay country={userProfile.country} />
@@ -129,7 +129,7 @@ export function Profile() {
                 <Button
                   variant={isEditing ? 'outline' : 'primary'}
                   onClick={() => setIsEditing(!isEditing)}
-                  className="flex-shrink-0"
+                  className="flex-shrink-0 w-full sm:w-auto"
                 >
                   {isEditing ? 'Cancel' : 'Edit Profile'}
                 </Button>
@@ -139,35 +139,35 @@ export function Profile() {
         </div>
 
         {isEditing ? (
-          <div className="p-8">
+          <div className="p-4 sm:p-8">
             <ProfileForm 
               onCancel={() => setIsEditing(false)}
               onSuccess={handleEditSuccess}
             />
           </div>
         ) : (
-          <div className="p-8 space-y-8">
+          <div className="p-4 sm:p-8 space-y-6 sm:space-y-8">
             {/* Basic Information */}
             <div>
-              <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Basic Information</h3>
-              <Card className="p-6 space-y-6 bg-gray-50/50">
+              <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3 sm:mb-4">Basic Information</h3>
+              <Card className="p-4 sm:p-6 space-y-4 sm:space-y-6 bg-gray-50/50">
                 {userProfile.bio && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Bio</label>
-                    <div className="text-gray-600 leading-relaxed">{userProfile.bio}</div>
+                    <div className="text-sm sm:text-base text-gray-600 leading-relaxed">{userProfile.bio}</div>
                   </div>
                 )}
-                <div className="grid grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                   {userProfile.yearsOfExperience && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">Experience</label>
-                      <div className="text-gray-600">{userProfile.yearsOfExperience} years</div>
+                      <div className="text-sm sm:text-base text-gray-600">{userProfile.yearsOfExperience} years</div>
                     </div>
                   )}
                   {userProfile.timezone && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">Timezone</label>
-                      <div className="text-gray-600">{userProfile.timezone}</div>
+                      <div className="text-sm sm:text-base text-gray-600">{userProfile.timezone}</div>
                     </div>
                   )}
                 </div>
@@ -176,16 +176,16 @@ export function Profile() {
 
             {/* Skills & Preferences */}
             <div>
-              <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Skills & Preferences</h3>
-              <Card className="p-6 space-y-6 bg-gray-50/50">
+              <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3 sm:mb-4">Skills & Preferences</h3>
+              <Card className="p-4 sm:p-6 space-y-4 sm:space-y-6 bg-gray-50/50">
                 {userProfile.skills && userProfile.skills.length > 0 && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-3">Skills</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2 sm:mb-3">Skills</label>
                     <div className="flex flex-wrap gap-2">
                       {userProfile.skills.map((skill: string) => (
                         <span
                           key={skill}
-                          className="px-3 py-1.5 bg-white shadow-sm border border-gray-200 rounded-full text-sm font-medium text-gray-700"
+                          className="px-2 sm:px-3 py-1 sm:py-1.5 bg-white shadow-sm border border-gray-200 rounded-full text-xs sm:text-sm font-medium text-gray-700"
                         >
                           {skill}
                         </span>
@@ -196,12 +196,12 @@ export function Profile() {
 
                 {userProfile.projectPreferences && userProfile.projectPreferences.length > 0 && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-3">Project Preferences</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2 sm:mb-3">Project Preferences</label>
                     <div className="flex flex-wrap gap-2">
                       {userProfile.projectPreferences.map((pref: string) => (
                         <span
                           key={pref}
-                          className="px-3 py-1.5 bg-blue-50 border border-blue-100 text-blue-700 rounded-full text-sm font-medium"
+                          className="px-2 sm:px-3 py-1 sm:py-1.5 bg-blue-50 border border-blue-100 text-blue-700 rounded-full text-xs sm:text-sm font-medium"
                         >
                           {pref}
                         </span>
@@ -212,12 +212,12 @@ export function Profile() {
 
                 {userProfile.languages && userProfile.languages.length > 0 && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-3">Languages</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2 sm:mb-3">Languages</label>
                     <div className="flex flex-wrap gap-2">
                       {userProfile.languages.map((lang: string) => (
                         <span
                           key={lang}
-                          className="px-3 py-1.5 bg-purple-50 border border-purple-100 text-purple-700 rounded-full text-sm font-medium"
+                          className="px-2 sm:px-3 py-1 sm:py-1.5 bg-purple-50 border border-purple-100 text-purple-700 rounded-full text-xs sm:text-sm font-medium"
                         >
                           {lang}
                         </span>
@@ -228,12 +228,12 @@ export function Profile() {
 
                 {userProfile.collaborationPreferences && userProfile.collaborationPreferences.length > 0 && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-3">Collaboration Style</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2 sm:mb-3">Collaboration Style</label>
                     <div className="flex flex-wrap gap-2">
                       {userProfile.collaborationPreferences.map((style: string) => (
                         <span
                           key={style}
-                          className="px-3 py-1.5 bg-green-50 border border-green-100 text-green-700 rounded-full text-sm font-medium"
+                          className="px-2 sm:px-3 py-1 sm:py-1.5 bg-green-50 border border-green-100 text-green-700 rounded-full text-xs sm:text-sm font-medium"
                         >
                           {style}
                         </span>
@@ -246,9 +246,9 @@ export function Profile() {
 
             {/* Additional Information */}
             <div>
-              <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Additional Information</h3>
-              <Card className="p-6 space-y-6 bg-gray-50/50">
-                <div className="grid grid-cols-2 gap-6">
+              <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3 sm:mb-4">Additional Information</h3>
+              <Card className="p-4 sm:p-6 space-y-4 sm:space-y-6 bg-gray-50/50">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                   {userProfile.country && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">Location</label>
@@ -259,14 +259,14 @@ export function Profile() {
                   {userProfile.weeklyAvailability && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">Weekly Availability</label>
-                      <div className="text-gray-600">{userProfile.weeklyAvailability} hours/week</div>
+                      <div className="text-sm sm:text-base text-gray-600">{userProfile.weeklyAvailability} hours/week</div>
                     </div>
                   )}
 
                   {userProfile.createdAt && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">Member Since</label>
-                      <div className="text-gray-600">
+                      <div className="text-sm sm:text-base text-gray-600">
                         {new Date(userProfile.createdAt).toLocaleDateString('en-US', {
                           year: 'numeric',
                           month: 'long',
@@ -276,73 +276,6 @@ export function Profile() {
                     </div>
                   )}
                 </div>
-              </Card>
-            </div>
-
-            {/* Portfolio Projects */}
-            <div>
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Portfolio Projects</h3>
-                <Button
-                  variant="outline"
-                  onClick={() => window.location.href = '/app/projects/create'}
-                  className="text-sm"
-                >
-                  Add Project
-                </Button>
-              </div>
-              <Card className="p-6 bg-gray-50/50">
-                {ownedProjects.length > 0 ? (
-                  <div className="grid grid-cols-2 gap-6">
-                    {ownedProjects.map((project) => (
-                      <div 
-                        key={project.id}
-                        className="cursor-pointer group"
-                        onClick={() => window.location.href = `/app/projects/${project.id}`}
-                      >
-                        <div className="relative w-full pt-[56.25%] bg-gray-100 rounded-lg overflow-hidden mb-3">
-                          {project.coverImage ? (
-                            <img
-                              src={project.coverImage}
-                              alt={project.title}
-                              className="absolute inset-0 w-full h-full object-cover"
-                            />
-                          ) : (
-                            <div className="absolute inset-0 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
-                              <span className="text-4xl">🎯</span>
-                            </div>
-                          )}
-                          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/30 opacity-0 group-hover:opacity-100 transition-opacity" />
-                        </div>
-                        <h3 className="font-medium mb-2 group-hover:text-primary-600 transition-colors">
-                          {project.title}
-                        </h3>
-                        <p className="text-sm text-gray-600 line-clamp-2 mb-3">
-                          {project.shortDescription}
-                        </p>
-                        <div className="flex flex-wrap gap-2">
-                          {project.skills?.slice(0, 3).map((skill) => (
-                            <span
-                              key={skill}
-                              className="px-2 py-1 bg-gray-100 rounded-full text-xs"
-                            >
-                              {skill}
-                            </span>
-                          ))}
-                          {project.skills && project.skills.length > 3 && (
-                            <span className="px-2 py-1 bg-gray-100 rounded-full text-xs">
-                              +{project.skills.length - 3}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center text-gray-500">
-                    No projects to display yet
-                  </div>
-                )}
               </Card>
             </div>
           </div>

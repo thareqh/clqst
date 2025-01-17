@@ -347,26 +347,26 @@ export function ResourcesTab({ projectId }: ResourcesTabProps) {
     <div className="space-y-8">
       {/* Storage Info */}
       <Card className="overflow-hidden shadow-sm">
-        <div className="border-b border-gray-100 bg-gray-50/50 px-8 py-5">
+        <div className="border-b border-gray-100 bg-gray-50/50 px-4 sm:px-8 py-4 sm:py-5">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-primary-50 rounded-lg">
-                <FiHardDrive className="w-5 h-5 text-primary-500" />
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="p-1.5 sm:p-2 bg-primary-50 rounded-lg">
+                <FiHardDrive className="w-4 h-4 sm:w-5 sm:h-5 text-primary-500" />
               </div>
               <div>
-                <h3 className="text-base font-medium text-gray-900">Storage Usage</h3>
-                <p className="text-sm text-gray-500 mt-0.5">
+                <h3 className="text-sm sm:text-base font-medium text-gray-900">Storage Usage</h3>
+                <p className="text-xs sm:text-sm text-gray-500 mt-0.5">
                   {formatFileSize(storageInfo.used)} of {formatFileSize(storageInfo.total)} used
                 </p>
               </div>
             </div>
-            <span className="text-sm font-medium text-gray-700">
+            <span className="text-xs sm:text-sm font-medium text-gray-700">
               {Math.round(getStorageUsagePercentage())}% used
             </span>
           </div>
         </div>
-        <div className="px-8 py-6">
-          <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden">
+        <div className="px-4 sm:px-8 py-4 sm:py-6">
+          <div className="w-full h-2 sm:h-3 bg-gray-100 rounded-full overflow-hidden">
             <div
               className={`h-full rounded-full transition-all duration-300 ${
                 getStorageUsagePercentage() > 90 
@@ -382,38 +382,38 @@ export function ResourcesTab({ projectId }: ResourcesTabProps) {
       </Card>
 
       {/* File Management */}
-      <div className="flex items-center justify-between bg-white px-6 py-4 rounded-lg shadow-sm border border-gray-100">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-white px-4 sm:px-6 py-3 sm:py-4 rounded-lg shadow-sm border border-gray-100 gap-3 sm:gap-0">
+        <div className="flex items-center gap-2 sm:gap-4">
           {state.currentPath !== '/' && (
             <Button
               variant="outline"
               onClick={() => handleNavigate(getParentPath(state.currentPath))}
-              className="flex items-center gap-2 hover:bg-gray-50"
+              className="flex items-center gap-1.5 hover:bg-gray-50 px-2.5 py-1.5 sm:px-3 sm:py-2 text-sm"
             >
-              <FiArrowLeft className="w-4 h-4" />
+              <FiArrowLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               Back
             </Button>
           )}
-          <div className="flex items-center gap-2 text-sm text-gray-600">
-            <span className="font-medium">Current path:</span>
-            <span className="bg-gray-50 px-3 py-1 rounded-md">{state.currentPath}</span>
+          <div className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-gray-600">
+            <span className="font-medium hidden sm:inline">Current path:</span>
+            <span className="bg-gray-50 px-2 sm:px-3 py-1 rounded-md truncate max-w-[150px] sm:max-w-none">{state.currentPath}</span>
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           <div className="flex items-center border rounded-lg overflow-hidden">
             <button
               onClick={() => setViewType('grid')}
-              className={`p-2 ${viewType === 'grid' ? 'bg-primary-50 text-primary-600' : 'hover:bg-gray-50'}`}
+              className={`p-1.5 sm:p-2 ${viewType === 'grid' ? 'bg-primary-50 text-primary-600' : 'hover:bg-gray-50'}`}
               title="Grid view"
             >
-              <FiGrid className="w-4 h-4" />
+              <FiGrid className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </button>
             <button
               onClick={() => setViewType('list')}
-              className={`p-2 ${viewType === 'list' ? 'bg-primary-50 text-primary-600' : 'hover:bg-gray-50'}`}
+              className={`p-1.5 sm:p-2 ${viewType === 'list' ? 'bg-primary-50 text-primary-600' : 'hover:bg-gray-50'}`}
               title="List view"
             >
-              <FiList className="w-4 h-4" />
+              <FiList className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </button>
           </div>
           {state.currentPath !== '/discussions' && state.currentPath !== '/chats' && (
@@ -421,26 +421,20 @@ export function ResourcesTab({ projectId }: ResourcesTabProps) {
               <Button
                 variant="outline"
                 onClick={() => setShowCreateFolderModal(true)}
-                className="flex items-center gap-2 hover:bg-gray-50"
+                className="flex items-center gap-1.5 hover:bg-gray-50 px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm"
               >
-                <FiFolderPlus className="w-4 h-4" />
-                New Folder
+                <FiFolderPlus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline">New Folder</span>
+                <span className="sm:hidden">Folder</span>
               </Button>
               <Button 
                 variant="primary" 
-                className="flex items-center gap-2 shadow-sm hover:shadow-md transition-shadow group relative"
+                className="flex items-center gap-1.5 shadow-sm hover:shadow-md transition-shadow group relative px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm"
                 onClick={() => fileInputRef.current?.click()}
               >
-                <FiUpload className="w-4 h-4" />
-                Upload Files
-                <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-64 bg-gray-900 text-white text-xs rounded-lg py-2 px-3 hidden group-hover:block">
-                  <div className="text-center space-y-1">
-                    <div>Max file size: {formatFileSize(FILE_LIMITS.maxFileSize)}</div>
-                    <div>Max files: {FILE_LIMITS.maxFileCount} files</div>
-                    <div>Storage left: {formatFileSize(storageInfo.total - storageInfo.used)}</div>
-                  </div>
-                  <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 w-2 h-2 bg-gray-900 rotate-45"></div>
-                </div>
+                <FiUpload className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline">Upload Files</span>
+                <span className="sm:hidden">Upload</span>
               </Button>
               <input
                 ref={fileInputRef}
@@ -456,10 +450,11 @@ export function ResourcesTab({ projectId }: ResourcesTabProps) {
             <Button
               variant="outline"
               onClick={handleDelete}
-              className="flex items-center gap-2 text-red-600 hover:bg-red-50 hover:border-red-200"
+              className="flex items-center gap-1.5 text-red-600 hover:bg-red-50 hover:border-red-200 px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm"
             >
-              <FiTrash2 className="w-4 h-4" />
-              Delete Selected
+              <FiTrash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <span className="hidden sm:inline">Delete Selected</span>
+              <span className="sm:hidden">Delete</span>
             </Button>
           )}
         </div>
@@ -493,34 +488,34 @@ export function ResourcesTab({ projectId }: ResourcesTabProps) {
 
       {/* Content */}
       <Card className="overflow-hidden shadow-sm">
-        <div className="border-b border-gray-100 bg-gray-50/50 px-8 py-5">
-          <h2 className="text-base font-medium text-gray-900">Files & Folders</h2>
+        <div className="border-b border-gray-100 bg-gray-50/50 px-4 sm:px-8 py-4 sm:py-5">
+          <h2 className="text-sm sm:text-base font-medium text-gray-900">Files & Folders</h2>
         </div>
-        <div className="p-8">
+        <div className="p-4 sm:p-8">
           {state.isLoading ? (
             <div className="flex items-center justify-center h-48">
               <div className="flex flex-col items-center gap-3">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500"></div>
-                <span className="text-sm text-gray-500">Loading content...</span>
+                <div className="animate-spin rounded-full h-6 w-6 sm:h-8 sm:w-8 border-b-2 border-primary-500"></div>
+                <span className="text-xs sm:text-sm text-gray-500">Loading content...</span>
               </div>
             </div>
           ) : state.folders.length === 0 && state.files.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-48 text-center">
-              <span className="text-5xl mb-4">📁</span>
-              <span className="text-gray-500 text-lg">This folder is empty</span>
-              <p className="text-sm text-gray-400 mt-2">Upload files or create folders to get started</p>
+              <span className="text-4xl sm:text-5xl mb-4">📁</span>
+              <span className="text-gray-500 text-base sm:text-lg">This folder is empty</span>
+              <p className="text-xs sm:text-sm text-gray-400 mt-2">Upload files or create folders to get started</p>
             </div>
           ) : (
-            <div className="space-y-8">
+            <div className="space-y-6 sm:space-y-8">
               {/* Folders */}
               {state.folders.length > 0 && (
                 <div>
-                  <h3 className="text-sm font-medium text-gray-700 mb-4 flex items-center gap-2">
-                    <FiFolder className="w-4 h-4" />
+                  <h3 className="text-xs sm:text-sm font-medium text-gray-700 mb-3 sm:mb-4 flex items-center gap-2">
+                    <FiFolder className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                     Folders
                   </h3>
                   <div className={viewType === 'grid' ? 
-                    "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" : 
+                    "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4" : 
                     "flex flex-col gap-2"
                   }>
                     {state.folders.map((folder) => {
@@ -531,50 +526,50 @@ export function ResourcesTab({ projectId }: ResourcesTabProps) {
                         <div
                           key={folder.id}
                           className={`${
-                            viewType === 'grid' ? 'p-4' : 'p-3'
+                            viewType === 'grid' ? 'p-3 sm:p-4' : 'p-2 sm:p-3'
                           } rounded-lg border transition-all duration-200 hover:shadow-md ${
                             state.selectedItems.includes(folder.id)
                               ? 'bg-primary-50 border-primary-200 shadow-sm'
                               : 'bg-white border-gray-200 hover:border-gray-300'
                           }`}
                         >
-                          <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-2 sm:gap-3">
                             <div 
-                              className="flex-1 flex items-center gap-3 cursor-pointer group"
+                              className="flex-1 flex items-center gap-2 sm:gap-3 cursor-pointer group"
                               onClick={() => handleNavigate(joinPaths(state.currentPath, folder.name))}
                             >
-                              <div className={`p-2 rounded-lg transition-colors ${
+                              <div className={`p-1.5 sm:p-2 rounded-lg transition-colors ${
                                 systemFolder?.color ? 'bg-blue-50' : 'bg-primary-50 group-hover:bg-primary-100'
                               }`}>
-                                <Icon className={`w-5 h-5 ${systemFolder?.color || 'text-primary-500'}`} />
+                                <Icon className={`w-4 h-4 sm:w-5 sm:h-5 ${systemFolder?.color || 'text-primary-500'}`} />
                               </div>
                               <div className="flex-1 min-w-0">
-                                <div className="font-medium text-gray-900 truncate group-hover:text-primary-600">
+                                <div className="font-medium text-sm sm:text-base text-gray-900 truncate group-hover:text-primary-600">
                                   {systemFolder?.label || folder.name}
                                 </div>
-                                <div className="text-xs text-gray-500 mt-0.5">
+                                <div className="text-[10px] sm:text-xs text-gray-500 mt-0.5">
                                   {folder.isSystemFolder ? 'System Folder' : `Created by ${folder.createdBy.name}`}
                                 </div>
                               </div>
                             </div>
                             {!folder.isSystemFolder && (
                               <Menu as="div" className="relative">
-                                <Menu.Button className="p-2 rounded-full hover:bg-gray-100">
-                                  <FiMoreVertical className="w-4 h-4 text-gray-500" />
+                                <Menu.Button className="p-1.5 sm:p-2 rounded-full hover:bg-gray-100">
+                                  <FiMoreVertical className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-500" />
                                 </Menu.Button>
-                                <Menu.Items className="absolute right-0 mt-1 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-10">
+                                <Menu.Items className="absolute right-0 mt-1 w-36 sm:w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-10">
                                   <Menu.Item>
                                     {({ active }) => (
                                       <button
                                         className={`${
                                           active ? 'bg-gray-50' : ''
-                                        } w-full px-4 py-2 text-left text-sm flex items-center gap-2`}
+                                        } w-full px-3 sm:px-4 py-1.5 sm:py-2 text-left text-xs sm:text-sm flex items-center gap-2`}
                                         onClick={() => {
                                           setSelectedItemForMove({ id: folder.id, type: 'folder' });
                                           setShowMoveModal(true);
                                         }}
                                       >
-                                        <FiMove className="w-4 h-4" />
+                                        <FiMove className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                                         Move
                                       </button>
                                     )}
@@ -584,13 +579,13 @@ export function ResourcesTab({ projectId }: ResourcesTabProps) {
                                       <button
                                         className={`${
                                           active ? 'bg-red-50' : ''
-                                        } w-full px-4 py-2 text-left text-sm flex items-center gap-2 text-red-600`}
+                                        } w-full px-3 sm:px-4 py-1.5 sm:py-2 text-left text-xs sm:text-sm flex items-center gap-2 text-red-600`}
                                         onClick={() => {
                                           setState(prev => ({ ...prev, selectedItems: [folder.id] }));
                                           handleDelete();
                                         }}
                                       >
-                                        <FiTrash2 className="w-4 h-4" />
+                                        <FiTrash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                                         Delete
                                       </button>
                                     )}
@@ -609,59 +604,59 @@ export function ResourcesTab({ projectId }: ResourcesTabProps) {
               {/* Files */}
               {state.files.length > 0 && (
                 <div>
-                  <h3 className="text-sm font-medium text-gray-700 mb-4 flex items-center gap-2">
-                    <FiFile className="w-4 h-4" />
+                  <h3 className="text-xs sm:text-sm font-medium text-gray-700 mb-3 sm:mb-4 flex items-center gap-2">
+                    <FiFile className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                     Files
                   </h3>
                   <div className={viewType === 'grid' ? 
-                    "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" : 
+                    "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4" : 
                     "flex flex-col gap-2"
                   }>
                     {state.files.map((file) => (
                       <div
                         key={file.id}
                         className={`${
-                          viewType === 'grid' ? 'p-4' : 'p-3'
+                          viewType === 'grid' ? 'p-3 sm:p-4' : 'p-2 sm:p-3'
                         } rounded-lg border transition-all duration-200 hover:shadow-md ${
                           state.selectedItems.includes(file.id)
                             ? 'bg-primary-50 border-primary-200 shadow-sm'
                             : 'bg-white border-gray-200 hover:border-gray-300'
                         }`}
                       >
-                        <div className="flex items-start gap-3">
+                        <div className="flex items-start gap-2 sm:gap-3">
                           <div 
-                            className="flex-1 flex items-start gap-3 cursor-pointer group min-w-0"
+                            className="flex-1 flex items-start gap-2 sm:gap-3 cursor-pointer group min-w-0"
                             onClick={() => window.open(file.url, '_blank')}
                           >
-                            <div className="p-2 rounded-lg bg-gray-50 group-hover:bg-gray-100 shrink-0">
-                              <FiFile className="w-5 h-5 text-gray-500" />
+                            <div className="p-1.5 sm:p-2 rounded-lg bg-gray-50 group-hover:bg-gray-100 shrink-0">
+                              <FiFile className="w-4 h-4 sm:w-5 sm:h-5 text-gray-500" />
                             </div>
-                            <div className="flex-1 min-w-0 py-1">
-                              <div className="font-medium text-gray-900 break-all group-hover:text-primary-600">
+                            <div className="flex-1 min-w-0 py-0.5 sm:py-1">
+                              <div className="font-medium text-sm sm:text-base text-gray-900 break-all group-hover:text-primary-600">
                                 {file.name}
                               </div>
-                              <div className="text-xs text-gray-500 mt-1">
+                              <div className="text-[10px] sm:text-xs text-gray-500 mt-0.5 sm:mt-1">
                                 {formatFileSize(file.size || 0)} • {file.type}
                               </div>
                             </div>
                           </div>
                           <Menu as="div" className="relative shrink-0">
-                            <Menu.Button className="p-2 rounded-full hover:bg-gray-100">
-                              <FiMoreVertical className="w-4 h-4 text-gray-500" />
+                            <Menu.Button className="p-1.5 sm:p-2 rounded-full hover:bg-gray-100">
+                              <FiMoreVertical className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-500" />
                             </Menu.Button>
-                            <Menu.Items className="absolute right-0 mt-1 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-10">
+                            <Menu.Items className="absolute right-0 mt-1 w-36 sm:w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-10">
                               <Menu.Item>
                                 {({ active }) => (
                                   <button
                                     className={`${
                                       active ? 'bg-gray-50' : ''
-                                    } w-full px-4 py-2 text-left text-sm flex items-center gap-2`}
+                                    } w-full px-3 sm:px-4 py-1.5 sm:py-2 text-left text-xs sm:text-sm flex items-center gap-2`}
                                     onClick={() => {
                                       setSelectedItemForMove({ id: file.id, type: 'file' });
                                       setShowMoveModal(true);
                                     }}
                                   >
-                                    <FiMove className="w-4 h-4" />
+                                    <FiMove className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                                     Move
                                   </button>
                                 )}
@@ -671,13 +666,13 @@ export function ResourcesTab({ projectId }: ResourcesTabProps) {
                                   <button
                                     className={`${
                                       active ? 'bg-red-50' : ''
-                                    } w-full px-4 py-2 text-left text-sm flex items-center gap-2 text-red-600`}
+                                    } w-full px-3 sm:px-4 py-1.5 sm:py-2 text-left text-xs sm:text-sm flex items-center gap-2 text-red-600`}
                                     onClick={() => {
                                       setState(prev => ({ ...prev, selectedItems: [file.id] }));
                                       handleDelete();
                                     }}
                                   >
-                                    <FiTrash2 className="w-4 h-4" />
+                                    <FiTrash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                                     Delete
                                   </button>
                                 )}
