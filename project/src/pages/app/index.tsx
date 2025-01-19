@@ -19,7 +19,7 @@ export default function AppLayout() {
       <AppHeader />
       <div className="flex pt-16">
         <AppSidebar />
-        <main className="flex-1 p-4 pb-24 sm:p-6 sm:pb-24 lg:p-8 lg:pl-72 lg:pb-8 overflow-hidden">
+        <main className="flex-1 p-0 pb-24 sm:p-6 sm:pb-24 lg:p-8 lg:pl-72 lg:pb-8 overflow-hidden">
           <AnimatePresence mode="wait">
             <motion.div
               key={location.pathname}

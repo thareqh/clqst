@@ -167,21 +167,24 @@ export function Chat() {
     if (!user) return;
 
     const fetchProjects = async () => {
-      // Query untuk projects dimana user adalah member
-      const memberProjectsQuery = query(
-        collection(db, 'projects'),
-        where('members', 'array-contains', user.uid)
-      );
-
-      // Query untuk projects dimana user adalah owner
-      const ownerProjectsQuery = query(
-        collection(db, 'projects'),
-        where('owner.id', '==', user.uid)
-      );
-
       try {
         logger.debug('Fetching projects');
         
+        // Query untuk mendapatkan semua proyek dimana user adalah member atau owner
+        const projectsRef = collection(db, 'projects');
+        const memberProjectsQuery = query(
+          projectsRef,
+          where('members', 'array-contains', {
+            id: user.uid,
+            name: user.displayName || 'Anonymous',
+            avatar: user.photoURL
+          })
+        );
+        const ownerProjectsQuery = query(
+          projectsRef,
+          where('owner.id', '==', user.uid)
+        );
+
         const [memberSnapshot, ownerSnapshot] = await Promise.all([
           getDocs(memberProjectsQuery),
           getDocs(ownerProjectsQuery)
@@ -197,6 +200,7 @@ export function Chat() {
           ...doc.data()
         })) as Project[];
 
+        // Gabungkan dan hilangkan duplikat
         const allProjects = [...memberProjects, ...ownerProjects];
         const uniqueProjects = allProjects.filter((project, index, self) =>
           index === self.findIndex((p) => p.id === project.id)
@@ -206,6 +210,7 @@ export function Chat() {
         setProjects(uniqueProjects);
       } catch (error) {
         logger.error('Error fetching projects:', error);
+        toast.error('Failed to load projects');
       }
     };
 
@@ -771,8 +776,8 @@ export function Chat() {
 
   // Handle DM click
   const handleDMClick = async (dm: DirectMessage) => {
-    // Navigate to specific chat URL
-    navigate(`/app/chat/${dm.id}`);
+    // Update URL tanpa refresh menggunakan replace
+    window.history.replaceState({}, '', `/app/chat/${dm.id}`);
     
     setActiveDM(dm.id);
     setActiveProject(null);
@@ -806,7 +811,9 @@ export function Chat() {
 
   // Handle project click
   const handleProjectClick = (projectId: string) => {
-    navigate('/app/chat'); // Reset URL to base chat URL
+    // Update URL tanpa refresh
+    window.history.replaceState({}, '', `/app/chat?projectId=${projectId}`);
+    
     setActiveProject(projectId);
     setActiveDM(null);
     setChatType('project');
@@ -836,6 +843,62 @@ export function Chat() {
     return () => unsubscribe();
   }, [user]);
 
+  // Load all DM users' profiles proactively
+  useEffect(() => {
+    if (!directMessages.length) return;
+
+    const loadProfiles = async () => {
+      const profilePromises = directMessages.map(async (dm) => {
+        try {
+          // Try profiles collection first
+          const profileRef = doc(db, 'profiles', dm.userId);
+          const profileSnap = await getDoc(profileRef);
+          
+          if (profileSnap.exists()) {
+            const profileData = profileSnap.data();
+            return {
+              id: dm.userId,
+              name: profileData.fullName || profileData.name || dm.name,
+              avatar: profileData.avatar || profileData.profileImage || profileData.photoURL || dm.avatar
+            };
+          }
+
+          // If not in profiles, try users collection
+          const userRef = doc(db, 'users', dm.userId);
+          const userSnap = await getDoc(userRef);
+          
+          if (userSnap.exists()) {
+            const userData = userSnap.data();
+            return {
+              id: dm.userId,
+              name: userData.fullName || userData.displayName || dm.name,
+              avatar: userData.avatar || userData.profileImage || userData.photoURL || dm.avatar
+            };
+          }
+
+          return {
+            id: dm.userId,
+            name: dm.name,
+            avatar: dm.avatar
+          };
+        } catch (error) {
+          console.error('Error loading profile:', error);
+          return null;
+        }
+      });
+
+      const profiles = await Promise.all(profilePromises);
+      const validProfiles = profiles.filter(Boolean);
+      
+      setUserProfiles(prev => ({
+        ...prev,
+        ...Object.fromEntries(validProfiles.map(profile => [profile!.id, profile!]))
+      }));
+    };
+
+    loadProfiles();
+  }, [directMessages]);
+
   // Subscribe to target user profile changes
   useEffect(() => {
     if (!targetUser?.id) return;
@@ -859,20 +922,20 @@ export function Chat() {
   }, [targetUser?.id]);
 
   return (
-    <div className="h-[100dvh] flex flex-col sm:flex-row gap-0 sm:gap-8 p-0 sm:p-8 bg-gray-50 overflow-hidden">
+    <div className="h-[100dvh] flex flex-col sm:flex-row sm:gap-8 bg-gray-50 overflow-hidden">
         {/* Sidebar */}
       <Card className={`w-full sm:w-96 flex flex-col h-[100dvh] sm:h-[calc(100dvh-4rem)] rounded-none sm:rounded-xl ${!showSidebar ? 'hidden sm:flex' : ''}`}>
-        <div className="sticky top-0 z-10 p-4 sm:p-6 border-b flex-shrink-0 bg-white">
-          <h2 className="text-xl font-semibold">Chats</h2>
-          </div>
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+        <div className="sticky top-0 z-10 p-2 sm:p-6 border-b flex-shrink-0 bg-white">
+          <h2 className="text-xl font-semibold px-2 sm:px-0">Chats</h2>
+        </div>
+        <div className="flex-1 overflow-y-auto p-2 sm:p-6">
           {/* Projects List */}
-          <div className="space-y-3">
+          <div className="space-y-2 sm:space-y-3">
             {projects.map((project) => (
               <button
                 key={project.id}
                 onClick={() => handleProjectClick(project.id)}
-                className={`w-full p-3 sm:p-4 rounded-xl flex items-center gap-3 sm:gap-4 hover:bg-gray-50 transition-colors ${
+                className={`w-full p-2 sm:p-4 rounded-xl flex items-center gap-2 sm:gap-4 hover:bg-gray-50 transition-colors ${
                   activeProject === project.id ? 'bg-primary-50 border border-primary-200' : ''
                 }`}
               >
@@ -898,9 +961,9 @@ export function Chat() {
           </div>
 
               {/* Direct Messages */}
-          <div className="mt-6 sm:mt-8">
-            <h3 className="text-sm font-semibold text-gray-500 mb-2 sm:mb-3">Direct Messages</h3>
-                <div className="space-y-2">
+          <div className="mt-4 sm:mt-8">
+            <h3 className="text-sm font-semibold text-gray-500 mb-2 sm:mb-3 px-2 sm:px-0">Direct Messages</h3>
+                <div className="space-y-1 sm:space-y-2">
                   {directMessages.map((dm) => (
                     <button
                       key={dm.id}
@@ -913,7 +976,8 @@ export function Chat() {
                         <img
                           src={userProfiles[dm.userId]?.avatar || dm.avatar}
                           alt={userProfiles[dm.userId]?.name || dm.name}
-                          className="w-8 h-8 rounded-full object-cover"
+                          className="w-8 h-8 rounded-full object-cover flex-shrink-0"
+                          style={{ aspectRatio: '1/1' }}
                           onError={(e) => {
                             if (e.currentTarget instanceof HTMLImageElement) {
                               e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(userProfiles[dm.userId]?.name || dm.name)}&background=random&size=32`;
@@ -921,7 +985,7 @@ export function Chat() {
                           }}
                         />
                       ) : (
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary-50 to-primary-100 flex items-center justify-center">
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary-50 to-primary-100 flex items-center justify-center flex-shrink-0">
                           <span className="text-sm font-semibold text-primary-600">
                             {(userProfiles[dm.userId]?.name || dm.name).charAt(0).toUpperCase()}
                           </span>
@@ -952,7 +1016,7 @@ export function Chat() {
           {(activeProject || activeDM || chatId) ? (
             <>
               {/* Chat Header */}
-            <div className="sticky top-0 z-20 px-4 sm:px-6 py-2 sm:py-4 border-b flex-shrink-0 bg-white">
+            <div className="sticky top-0 z-20 px-3 sm:px-6 py-2 sm:py-4 border-b flex-shrink-0 bg-white">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                   {/* Back Button for Mobile */}
@@ -1038,7 +1102,7 @@ export function Chat() {
               </div>
 
               {/* Messages */}
-            <div className="flex-1 overflow-y-auto px-3 sm:px-6 py-2 sm:py-4 space-y-2 sm:space-y-6 max-h-[calc(100dvh-8.5rem)] sm:max-h-none">
+            <div className="flex-1 overflow-y-auto px-2 sm:px-6 py-2 sm:py-4 space-y-2 sm:space-y-6 max-h-[calc(100dvh-8.5rem)] sm:max-h-none">
                 {groupedMessages.map((group) => (
                 <div key={group.date} className="space-y-2 sm:space-y-6">
                     <div className="text-center sticky top-2 z-10">
@@ -1187,7 +1251,7 @@ export function Chat() {
               </div>
 
               {/* Message Input */}
-            <div className="sticky bottom-0 z-20 w-full px-3 sm:px-6 py-2 sm:py-4 border-t flex-shrink-0 bg-white">
+            <div className="sticky bottom-0 z-20 w-full px-2 sm:px-6 py-2 sm:py-4 border-t flex-shrink-0 bg-white">
               {/* Reply Preview */}
               {replyingTo && (
                 <div className="mb-2 sm:mb-3 p-2 sm:p-3 bg-gray-50 rounded-xl border flex items-center justify-between">
