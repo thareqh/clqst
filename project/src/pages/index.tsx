@@ -1,7 +1,7 @@
 import { Header } from '../components/Header';
 import { Hero } from '../components/Hero';
 import { Features } from '../components/features/Features';
-import { HowItWorks } from '../components/pages/HowItWorks';
+import { HowItWorks } from '../components/sections/HowItWorks';
 import { Stats } from '../components/sections/Stats';
 import { Solutions } from '../components/solutions/Solutions';
 import { Pricing } from '../components/sections/Pricing';

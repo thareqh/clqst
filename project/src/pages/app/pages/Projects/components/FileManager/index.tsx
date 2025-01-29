@@ -2,13 +2,13 @@ import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { FiFolder, FiFile, FiUpload, FiFolderPlus, FiTrash2, FiArrowLeft, FiHardDrive, FiMessageCircle, FiMessageSquare, FiMove, FiCopy, FiMoreVertical, FiGrid, FiList } from 'react-icons/fi';
+import { FiFolder, FiFile, FiUpload, FiFolderPlus, FiTrash2, FiArrowLeft, FiHardDrive, FiMessageCircle, FiMessageSquare, FiMove, FiCopy, FiMoreVertical, FiGrid, FiList, FiChevronRight, FiX } from 'react-icons/fi';
 import { toast } from 'sonner';
 import type { FileItem, Folder, FileSystemState } from '@/types/file';
 import { FILE_LIMITS, formatFileSize, validateFileUpload } from '@/types/file';
 import { uploadFile, getFiles, getFolders, createFolder, deleteFile, deleteFolder, getParentPath, joinPaths, moveFile, moveFolder, calculateTotalStorage } from '@/services/fileService';
 import { CreateFolderModal } from './CreateFolderModal';
-import { Menu } from '@headlessui/react';
+import { Menu, Dialog } from '@headlessui/react';
 
 interface ResourcesTabProps {
   projectId: string;
@@ -52,6 +52,8 @@ export function ResourcesTab({ projectId }: ResourcesTabProps) {
   const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 });
   const [contextMenuTarget, setContextMenuTarget] = useState<{id: string, type: 'file' | 'folder'} | null>(null);
   const [viewType, setViewType] = useState<'grid' | 'list'>('grid');
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<{ id: string; type: 'file' | 'folder'; name: string } | null>(null);
 
   // Inisialisasi folder sistem saat komponen dimuat
   useEffect(() => {
@@ -228,17 +230,16 @@ export function ResourcesTab({ projectId }: ResourcesTabProps) {
     try {
       setState(prev => ({ ...prev, isLoading: true }));
       
-      await createFolder({
-        name: folderName,
-        path: state.currentPath,
-        createdAt: new Date().toISOString(),
-        createdBy: {
-          id: user?.uid || '',
-          name: user?.displayName || 'Anonymous',
-          avatar: user?.photoURL || undefined
-        },
-        projectId
-      });
+      await createFolder(
+        projectId,
+        state.currentPath,
+        folderName,
+        {
+          id: user.uid,
+          name: user.displayName || 'Unknown User',
+          avatar: user.photoURL
+        }
+      );
 
       toast.success('Folder created successfully');
       loadContent();
@@ -251,35 +252,29 @@ export function ResourcesTab({ projectId }: ResourcesTabProps) {
   };
 
   const handleDelete = async () => {
-    if (state.selectedItems.length === 0) return;
-
-    const confirmed = window.confirm('Are you sure you want to delete selected items?');
-    if (!confirmed) return;
+    if (!itemToDelete) return;
 
     try {
       setState(prev => ({ ...prev, isLoading: true }));
 
-      await Promise.all(
-        state.selectedItems.map(async (id) => {
-          const file = state.files.find(f => f.id === id);
-          const folder = state.folders.find(f => f.id === id);
-
+      if (itemToDelete.type === 'file') {
+        const file = state.files.find(f => f.id === itemToDelete.id);
           if (file) {
             await deleteFile(projectId, file.id, file.url);
-          } else if (folder && !folder.isSystemFolder) {
-            await deleteFolder(projectId, folder.id);
+        }
+      } else {
+        await deleteFolder(projectId, itemToDelete.id);
           }
-        })
-      );
 
-      toast.success('Items deleted successfully');
-      setState(prev => ({ ...prev, selectedItems: [] }));
+      toast.success(`${itemToDelete.type === 'file' ? 'File' : 'Folder'} deleted successfully`);
       loadContent();
     } catch (error) {
-      console.error('Error deleting items:', error);
-      toast.error('Failed to delete items');
+      console.error('Error deleting item:', error);
+      toast.error(`Failed to delete ${itemToDelete.type}`);
     } finally {
       setState(prev => ({ ...prev, isLoading: false }));
+      setShowDeleteModal(false);
+      setItemToDelete(null);
     }
   };
 
@@ -346,8 +341,8 @@ export function ResourcesTab({ projectId }: ResourcesTabProps) {
   return (
     <div className="space-y-8">
       {/* Storage Info */}
-      <Card className="overflow-hidden shadow-sm">
-        <div className="border-b border-gray-100 bg-gray-50/50 px-4 sm:px-8 py-4 sm:py-5">
+      <Card className="overflow-hidden border border-gray-200">
+        <div className="border-b border-gray-200 bg-gray-50/50 px-4 sm:px-8 py-4 sm:py-5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 sm:gap-3">
               <div className="p-1.5 sm:p-2 bg-primary-50 rounded-lg">
@@ -381,25 +376,12 @@ export function ResourcesTab({ projectId }: ResourcesTabProps) {
         </div>
       </Card>
 
-      {/* File Management */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-white px-4 sm:px-6 py-3 sm:py-4 rounded-lg shadow-sm border border-gray-100 gap-3 sm:gap-0">
-        <div className="flex items-center gap-2 sm:gap-4">
-          {state.currentPath !== '/' && (
-            <Button
-              variant="outline"
-              onClick={() => handleNavigate(getParentPath(state.currentPath))}
-              className="flex items-center gap-1.5 hover:bg-gray-50 px-2.5 py-1.5 sm:px-3 sm:py-2 text-sm"
-            >
-              <FiArrowLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-              Back
-            </Button>
-          )}
-          <div className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-gray-600">
-            <span className="font-medium hidden sm:inline">Current path:</span>
-            <span className="bg-gray-50 px-2 sm:px-3 py-1 rounded-md truncate max-w-[150px] sm:max-w-none">{state.currentPath}</span>
-          </div>
-        </div>
-        <div className="flex items-center gap-2 sm:gap-3">
+      {/* Files List Card */}
+      <Card className="overflow-hidden border border-gray-200">
+        <div className="border-b border-gray-200 bg-gray-50/50 px-4 sm:px-8 py-4 sm:py-5">
+          <div className="flex items-center justify-between">
+            <h2 className="text-base sm:text-lg font-medium text-gray-900">Files & Folders</h2>
+            <div className="flex items-center gap-2">
           <div className="flex items-center border rounded-lg overflow-hidden">
             <button
               onClick={() => setViewType('grid')}
@@ -416,6 +398,41 @@ export function ResourcesTab({ projectId }: ResourcesTabProps) {
               <FiList className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </button>
           </div>
+            </div>
+          </div>
+        </div>
+        
+        <div className="border-b border-gray-200 bg-white px-4 sm:px-8 py-3 sm:py-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 text-xs sm:text-sm text-gray-600">
+                <FiFolder className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400" />
+                {state.currentPath.split('/').map((segment, index, array) => (
+                  <div key={index} className="flex items-center">
+                    {index > 0 && <FiChevronRight className="w-3.5 h-3.5 text-gray-400 mx-1" />}
+                    <span className={`${index === array.length - 1 ? 'text-gray-900 font-medium' : 'hover:text-gray-900 cursor-pointer'}`}
+                          onClick={() => {
+                            if (index < array.length - 1) {
+                              handleNavigate('/' + array.slice(1, index + 1).join('/'));
+                            }
+                          }}>
+                      {segment || 'Root'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="flex items-center gap-2 sm:gap-3">
+              {state.currentPath !== '/' && (
+                <Button
+                  variant="outline"
+                  onClick={() => handleNavigate(getParentPath(state.currentPath))}
+                  className="flex items-center gap-1.5 hover:bg-gray-50 px-2.5 py-1.5 sm:px-3 sm:py-2 text-sm"
+                >
+                  <FiArrowLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  Back
+                </Button>
+              )}
           {state.currentPath !== '/discussions' && state.currentPath !== '/chats' && (
             <>
               <Button
@@ -449,7 +466,14 @@ export function ResourcesTab({ projectId }: ResourcesTabProps) {
           {state.selectedItems.length > 0 && (
             <Button
               variant="outline"
-              onClick={handleDelete}
+                  onClick={() => {
+                    setItemToDelete({
+                      id: state.selectedItems[0],
+                      type: state.files.find(f => f.id === state.selectedItems[0]) ? 'file' : 'folder',
+                      name: state.files.find(f => f.id === state.selectedItems[0])?.name || state.folders.find(f => f.id === state.selectedItems[0])?.name || ''
+                    });
+                    setShowDeleteModal(true);
+                  }}
               className="flex items-center gap-1.5 text-red-600 hover:bg-red-50 hover:border-red-200 px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm"
             >
               <FiTrash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
@@ -459,10 +483,10 @@ export function ResourcesTab({ projectId }: ResourcesTabProps) {
           )}
         </div>
       </div>
-
-      {/* Upload Progress */}
+        </div>
+        <div className="p-4 sm:p-8">
       {Object.keys(uploadProgress).length > 0 && (
-        <Card className="p-6 shadow-sm">
+            <Card className="p-6 shadow-sm mb-6">
           <h3 className="text-base font-medium text-gray-900 mb-5 flex items-center gap-2">
             <FiUpload className="w-5 h-5 text-primary-500" />
             Uploading Files...
@@ -485,13 +509,6 @@ export function ResourcesTab({ projectId }: ResourcesTabProps) {
           </div>
         </Card>
       )}
-
-      {/* Content */}
-      <Card className="overflow-hidden shadow-sm">
-        <div className="border-b border-gray-100 bg-gray-50/50 px-4 sm:px-8 py-4 sm:py-5">
-          <h2 className="text-sm sm:text-base font-medium text-gray-900">Files & Folders</h2>
-        </div>
-        <div className="p-4 sm:p-8">
           {state.isLoading ? (
             <div className="flex items-center justify-center h-48">
               <div className="flex flex-col items-center gap-3">
@@ -515,7 +532,7 @@ export function ResourcesTab({ projectId }: ResourcesTabProps) {
                     Folders
                   </h3>
                   <div className={viewType === 'grid' ? 
-                    "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4" : 
+                    "grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4" : 
                     "flex flex-col gap-2"
                   }>
                     {state.folders.map((folder) => {
@@ -527,10 +544,10 @@ export function ResourcesTab({ projectId }: ResourcesTabProps) {
                           key={folder.id}
                           className={`${
                             viewType === 'grid' ? 'p-3 sm:p-4' : 'p-2 sm:p-3'
-                          } rounded-lg border transition-all duration-200 hover:shadow-md ${
+                          } rounded-lg border transition-all duration-200 ${
                             state.selectedItems.includes(folder.id)
-                              ? 'bg-primary-50 border-primary-200 shadow-sm'
-                              : 'bg-white border-gray-200 hover:border-gray-300'
+                              ? 'bg-primary-50 border-primary-200'
+                              : 'bg-white border-gray-200 hover:bg-gray-50/80 hover:border-primary-200'
                           }`}
                         >
                           <div className="flex items-center gap-2 sm:gap-3">
@@ -538,13 +555,13 @@ export function ResourcesTab({ projectId }: ResourcesTabProps) {
                               className="flex-1 flex items-center gap-2 sm:gap-3 cursor-pointer group"
                               onClick={() => handleNavigate(joinPaths(state.currentPath, folder.name))}
                             >
-                              <div className={`p-1.5 sm:p-2 rounded-lg transition-colors ${
-                                systemFolder?.color ? 'bg-blue-50' : 'bg-primary-50 group-hover:bg-primary-100'
+                              <div className={`p-1.5 sm:p-2 rounded-lg transition-all duration-200 ${
+                                systemFolder?.color ? 'bg-blue-50' : 'bg-primary-50/60 group-hover:bg-primary-100'
                               }`}>
                                 <Icon className={`w-4 h-4 sm:w-5 sm:h-5 ${systemFolder?.color || 'text-primary-500'}`} />
                               </div>
                               <div className="flex-1 min-w-0">
-                                <div className="font-medium text-sm sm:text-base text-gray-900 truncate group-hover:text-primary-600">
+                                <div className="font-medium text-sm sm:text-base text-gray-900 truncate group-hover:text-primary-600 transition-colors duration-200">
                                   {systemFolder?.label || folder.name}
                                 </div>
                                 <div className="text-[10px] sm:text-xs text-gray-500 mt-0.5">
@@ -554,16 +571,16 @@ export function ResourcesTab({ projectId }: ResourcesTabProps) {
                             </div>
                             {!folder.isSystemFolder && (
                               <Menu as="div" className="relative">
-                                <Menu.Button className="p-1.5 sm:p-2 rounded-full hover:bg-gray-100">
-                                  <FiMoreVertical className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-500" />
+                                <Menu.Button className="p-1.5 sm:p-2 rounded-full hover:bg-gray-100 transition-colors duration-200">
+                                  <FiMoreVertical className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400 hover:text-gray-600" />
                                 </Menu.Button>
-                                <Menu.Items className="absolute right-0 mt-1 w-36 sm:w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-10">
+                                <Menu.Items className="absolute right-0 mt-1 w-36 sm:w-48 bg-white rounded-lg border border-gray-200 py-1 z-10 focus:outline-none">
                                   <Menu.Item>
                                     {({ active }) => (
                                       <button
                                         className={`${
                                           active ? 'bg-gray-50' : ''
-                                        } w-full px-3 sm:px-4 py-1.5 sm:py-2 text-left text-xs sm:text-sm flex items-center gap-2`}
+                                        } w-full px-3 sm:px-4 py-1.5 sm:py-2 text-left text-xs sm:text-sm flex items-center gap-2 text-gray-700 transition-colors duration-200`}
                                         onClick={() => {
                                           setSelectedItemForMove({ id: folder.id, type: 'folder' });
                                           setShowMoveModal(true);
@@ -579,10 +596,14 @@ export function ResourcesTab({ projectId }: ResourcesTabProps) {
                                       <button
                                         className={`${
                                           active ? 'bg-red-50' : ''
-                                        } w-full px-3 sm:px-4 py-1.5 sm:py-2 text-left text-xs sm:text-sm flex items-center gap-2 text-red-600`}
+                                        } w-full px-3 sm:px-4 py-1.5 sm:py-2 text-left text-xs sm:text-sm flex items-center gap-2 text-red-600 transition-colors duration-200`}
                                         onClick={() => {
-                                          setState(prev => ({ ...prev, selectedItems: [folder.id] }));
-                                          handleDelete();
+                                          setItemToDelete({
+                                            id: folder.id,
+                                            type: 'folder',
+                                            name: folder.name
+                                          });
+                                          setShowDeleteModal(true);
                                         }}
                                       >
                                         <FiTrash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
@@ -617,10 +638,10 @@ export function ResourcesTab({ projectId }: ResourcesTabProps) {
                         key={file.id}
                         className={`${
                           viewType === 'grid' ? 'p-3 sm:p-4' : 'p-2 sm:p-3'
-                        } rounded-lg border transition-all duration-200 hover:shadow-md ${
+                        } rounded-lg border transition-colors duration-200 ${
                           state.selectedItems.includes(file.id)
-                            ? 'bg-primary-50 border-primary-200 shadow-sm'
-                            : 'bg-white border-gray-200 hover:border-gray-300'
+                            ? 'bg-primary-50 border-primary-200'
+                            : 'bg-white border-gray-200 hover:bg-gray-50/80 hover:border-primary-200'
                         }`}
                       >
                         <div className="flex items-start gap-2 sm:gap-3">
@@ -628,11 +649,11 @@ export function ResourcesTab({ projectId }: ResourcesTabProps) {
                             className="flex-1 flex items-start gap-2 sm:gap-3 cursor-pointer group min-w-0"
                             onClick={() => window.open(file.url, '_blank')}
                           >
-                            <div className="p-1.5 sm:p-2 rounded-lg bg-gray-50 group-hover:bg-gray-100 shrink-0">
+                            <div className="p-1.5 sm:p-2 rounded-lg bg-gray-50 group-hover:bg-gray-100 transition-colors duration-200 shrink-0">
                               <FiFile className="w-4 h-4 sm:w-5 sm:h-5 text-gray-500" />
                             </div>
                             <div className="flex-1 min-w-0 py-0.5 sm:py-1">
-                              <div className="font-medium text-sm sm:text-base text-gray-900 break-all group-hover:text-primary-600">
+                              <div className="font-medium text-sm sm:text-base text-gray-900 break-all group-hover:text-primary-600 transition-colors duration-200">
                                 {file.name}
                               </div>
                               <div className="text-[10px] sm:text-xs text-gray-500 mt-0.5 sm:mt-1">
@@ -641,16 +662,16 @@ export function ResourcesTab({ projectId }: ResourcesTabProps) {
                             </div>
                           </div>
                           <Menu as="div" className="relative shrink-0">
-                            <Menu.Button className="p-1.5 sm:p-2 rounded-full hover:bg-gray-100">
-                              <FiMoreVertical className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-500" />
+                            <Menu.Button className="p-1.5 sm:p-2 rounded-full hover:bg-gray-100 transition-colors duration-200">
+                              <FiMoreVertical className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400 hover:text-gray-600" />
                             </Menu.Button>
-                            <Menu.Items className="absolute right-0 mt-1 w-36 sm:w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-10">
+                            <Menu.Items className="absolute right-0 mt-1 w-36 sm:w-48 bg-white rounded-lg border border-gray-200 py-1 z-10 focus:outline-none">
                               <Menu.Item>
                                 {({ active }) => (
                                   <button
                                     className={`${
                                       active ? 'bg-gray-50' : ''
-                                    } w-full px-3 sm:px-4 py-1.5 sm:py-2 text-left text-xs sm:text-sm flex items-center gap-2`}
+                                    } w-full px-3 sm:px-4 py-1.5 sm:py-2 text-left text-xs sm:text-sm flex items-center gap-2 text-gray-700 transition-colors duration-200`}
                                     onClick={() => {
                                       setSelectedItemForMove({ id: file.id, type: 'file' });
                                       setShowMoveModal(true);
@@ -666,10 +687,14 @@ export function ResourcesTab({ projectId }: ResourcesTabProps) {
                                   <button
                                     className={`${
                                       active ? 'bg-red-50' : ''
-                                    } w-full px-3 sm:px-4 py-1.5 sm:py-2 text-left text-xs sm:text-sm flex items-center gap-2 text-red-600`}
+                                    } w-full px-3 sm:px-4 py-1.5 sm:py-2 text-left text-xs sm:text-sm flex items-center gap-2 text-red-600 transition-colors duration-200`}
                                     onClick={() => {
-                                      setState(prev => ({ ...prev, selectedItems: [file.id] }));
-                                      handleDelete();
+                                      setItemToDelete({
+                                        id: file.id,
+                                        type: 'file',
+                                        name: file.name
+                                      });
+                                      setShowDeleteModal(true);
                                     }}
                                   >
                                     <FiTrash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
@@ -749,8 +774,109 @@ export function ResourcesTab({ projectId }: ResourcesTabProps) {
       <CreateFolderModal
         isOpen={showCreateFolderModal}
         onClose={() => setShowCreateFolderModal(false)}
-        onSubmit={handleCreateFolder}
+        onConfirm={async (name) => {
+          if (!user) {
+            toast.error('You must be logged in to create a folder');
+            return;
+          }
+
+          try {
+            setState(prev => ({ ...prev, isLoading: true }));
+            const userPhotoURL = user.photoURL === null ? undefined : user.photoURL;
+            
+            await createFolder(
+              projectId,
+              state.currentPath,
+              name,
+              {
+                id: user.uid,
+                name: user.displayName || 'Unknown User',
+                avatar: userPhotoURL
+              }
+            );
+            toast.success('Folder created successfully');
+            loadContent();
+          } catch (error) {
+            console.error('Error creating folder:', error);
+            toast.error('Failed to create folder');
+          } finally {
+            setState(prev => ({ ...prev, isLoading: false }));
+            setShowCreateFolderModal(false);
+          }
+        }}
       />
+
+      {/* Delete Confirmation Modal */}
+      <Dialog
+        open={showDeleteModal}
+        onClose={() => {
+          setShowDeleteModal(false);
+          setItemToDelete(null);
+        }}
+        className="fixed inset-0 z-50 overflow-y-auto"
+      >
+        <div className="flex min-h-screen items-center justify-center p-4">
+          <Dialog.Overlay className="fixed inset-0 bg-black/50" />
+
+          <Card className="relative w-full max-w-md">
+            <div className="border-b border-gray-200 px-6 py-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-red-50 rounded-lg">
+                    <FiTrash2 className="w-5 h-5 text-red-500" />
+                  </div>
+                  <Dialog.Title className="text-lg font-medium text-gray-900">
+                    Delete {itemToDelete?.type === 'file' ? 'File' : 'Folder'}
+                  </Dialog.Title>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowDeleteModal(false);
+                    setItemToDelete(null);
+                  }}
+                  className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                >
+                  <FiX className="w-5 h-5 text-gray-500" />
+                </button>
+              </div>
+            </div>
+            
+            <div className="p-6">
+              <p className="text-sm text-gray-600">
+                Are you sure you want to delete{' '}
+                <span className="font-medium text-gray-900">{itemToDelete?.name}</span>?
+                {itemToDelete?.type === 'folder' && (
+                  <span className="block mt-1 text-red-600">
+                    This will also delete all files and folders inside it.
+                  </span>
+                )}
+              </p>
+
+              <div className="mt-6 flex items-center justify-end gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setShowDeleteModal(false);
+                    setItemToDelete(null);
+                  }}
+                  className="px-4 py-2"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  variant="primary"
+                  onClick={handleDelete}
+                  className="px-4 py-2 bg-red-600 hover:bg-red-700 border-red-600 hover:border-red-700 text-white"
+                >
+                  Delete
+                </Button>
+              </div>
+            </div>
+          </Card>
+        </div>
+      </Dialog>
     </div>
   );
 } 

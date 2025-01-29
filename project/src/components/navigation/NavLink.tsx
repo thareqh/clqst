@@ -13,17 +13,28 @@ export function NavLink({ href, children, className = '' }: NavLinkProps) {
   const isActive = location.pathname === href;
 
   return (
-    <motion.div
-      whileHover={{ y: -1 }}
-      className="relative"
-    >
-      <Link
-        to={href}
-        className={`text-sm font-medium ${isActive ? 'text-gray-900' : 'text-gray-600'} hover:text-gray-900 transition-colors ${className}`}
+    <Link to={href}>
+      <motion.div
+        className={`relative inline-block ${className}`}
+        whileHover="hover"
+        initial="initial"
+        animate="animate"
       >
-        {children}
-        <span className={`absolute inset-x-0 -bottom-1 h-0.5 bg-black transition-transform origin-left ${isActive ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100'}`} />
-      </Link>
-    </motion.div>
+        <motion.div
+          className={`relative z-10 py-2 px-4 text-sm transition-all duration-200 ${
+            isActive 
+              ? 'text-gray-900 font-semibold' 
+              : 'text-gray-500 hover:text-gray-800'
+          }`}
+          variants={{
+            initial: { y: 0 },
+            hover: { y: 0 }
+          }}
+          transition={{ duration: 0.2 }}
+        >
+          {children}
+        </motion.div>
+      </motion.div>
+    </Link>
   );
 }

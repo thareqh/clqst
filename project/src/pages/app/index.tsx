@@ -1,14 +1,15 @@
 import { Routes, Route, useLocation } from 'react-router-dom';
-import { AppHeader } from './components/AppHeader';
 import { AppSidebar } from './components/AppSidebar';
 import { Dashboard } from './pages/Dashboard';
 import { Projects } from './pages/Projects';
 import { CreateProject } from './pages/Projects/pages/CreateProject';
 import { ProjectDetails } from './pages/Projects/pages/ProjectDetails';
-import { Chat } from './pages/Chat';
+import { Chat } from './pages/Chat/index';
 import Explore from './pages/Explore';
 import { Profile } from './pages/Profile';
 import { UserProfile } from './pages/UserProfile';
+import { Notifications } from './pages/Notifications';
+import Settings from './pages/Settings';
 import { AnimatePresence, motion } from 'framer-motion';
 
 export default function AppLayout() {
@@ -16,10 +17,9 @@ export default function AppLayout() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <AppHeader />
-      <div className="flex pt-16">
+      <div className="flex">
         <AppSidebar />
-        <main className="flex-1 p-0 pb-24 sm:p-6 sm:pb-24 lg:p-8 lg:pl-72 lg:pb-8 overflow-hidden">
+        <main className="flex-1 p-8 lg:pl-72">
           <AnimatePresence mode="wait">
             <motion.div
               key={location.pathname}
@@ -39,6 +39,8 @@ export default function AppLayout() {
                 <Route path="chat/:chatId" element={<Chat />} />
                 <Route path="profile" element={<Profile />} />
                 <Route path="users/:userId" element={<UserProfile />} />
+                <Route path="notifications" element={<Notifications />} />
+                <Route path="settings" element={<Settings />} />
               </Routes>
             </motion.div>
           </AnimatePresence>

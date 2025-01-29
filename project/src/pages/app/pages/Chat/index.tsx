@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { collection, query, where, orderBy, onSnapshot, addDoc, getDocs, doc, getDoc, DocumentData, updateDoc, limit, arrayUnion } from 'firebase/firestore';
+import { collection, query, where, orderBy, onSnapshot, addDoc, getDocs, doc, getDoc, DocumentData, updateDoc, limit, arrayUnion, deleteDoc, writeBatch } from 'firebase/firestore';
 import { db, storage } from '@/config/firebase';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -16,7 +16,9 @@ import {
   ArrowUturnLeftIcon,
   CheckIcon,
   HandThumbUpIcon,
-  ChevronLeftIcon
+  ChevronLeftIcon,
+  TrashIcon,
+  EllipsisVerticalIcon
 } from '@heroicons/react/24/solid';
 import { toast } from 'react-hot-toast';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -122,6 +124,7 @@ export function Chat() {
   const navigate = useNavigate();
   const [userProfiles, setUserProfiles] = useState<Record<string, UserProfile>>({});
   const [showSidebar, setShowSidebar] = useState(true);
+  const [showChatMenu, setShowChatMenu] = useState(false);
 
   // Group messages by date
   const groupedMessages = messages.reduce((groups: MessageGroup[], message) => {
@@ -610,23 +613,89 @@ export function Chat() {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  // Add message status update
+  // Subscribe to direct messages
   useEffect(() => {
-    if (!user || !activeProject) return;
+    if (!user) return;
 
-    // Mark messages as read
-    const unreadMessages = messages.filter(
-      msg => msg.sender.id !== user.uid && (!msg.readBy || !msg.readBy.includes(user.uid))
+    const chatsQuery = query(
+      collection(db, 'chats'),
+      where('participants', 'array-contains', user.uid)
     );
 
-    unreadMessages.forEach(async (message) => {
-      const messageRef = doc(db, 'messages', message.id);
-      await updateDoc(messageRef, {
-        status: 'read',
+    const unsubscribe = onSnapshot(chatsQuery, async (snapshot) => {
+      const dms = await Promise.all(
+        snapshot.docs.map(async (doc) => {
+          const data = doc.data();
+          const otherUserId = data.participants.find((id: string) => id !== user.uid);
+          
+          // Get unread count specifically for current user
+          const unreadCount = data.unreadCount?.[user.uid] || 0;
+          
+          return {
+            id: doc.id,
+            userId: otherUserId,
+            name: data.participantNames?.[otherUserId] || 'Unknown',
+            avatar: data.participantAvatars?.[otherUserId],
+            lastMessage: data.lastMessage || '',
+            lastMessageTime: data.lastMessageTime,
+            unreadCount
+          };
+        })
+      );
+
+      setDirectMessages(dms);
+    });
+
+    return () => unsubscribe();
+  }, [user]);
+
+  // Mark messages as read when chat is opened
+  useEffect(() => {
+    if (!user || !activeDM) return;
+
+    const chatRef = doc(db, 'chats', activeDM);
+    const messagesQuery = query(
+      collection(db, 'messages'),
+      where('chatId', '==', activeDM),
+      orderBy('createdAt', 'desc')
+    );
+
+    const markMessagesAsRead = async () => {
+      const snapshot = await getDocs(messagesQuery);
+      if (snapshot.empty) return;
+
+      const batch = writeBatch(db);
+      
+      // Filter messages that need to be marked as read
+      snapshot.docs.forEach(doc => {
+        const messageData = doc.data();
+        if (
+          messageData.sender.id !== user.uid && 
+          (!messageData.readBy || !messageData.readBy.includes(user.uid))
+        ) {
+          batch.update(doc.ref, {
         readBy: arrayUnion(user.uid)
       });
-    });
-  }, [messages, user, activeProject]);
+        }
+      });
+
+      // Reset unread count
+      batch.update(chatRef, {
+        [`unreadCount.${user.uid}`]: 0
+      });
+
+      await batch.commit();
+
+      // Update local state
+      setDirectMessages(prev => prev.map(dm => 
+        dm.id === activeDM 
+          ? { ...dm, unreadCount: 0 }
+          : dm
+      ));
+    };
+
+    markMessagesAsRead();
+  }, [user, activeDM]);
 
   // Add effect to reset replyingTo when project/DM changes
   useEffect(() => {
@@ -921,38 +990,166 @@ export function Chat() {
     return () => unsubscribe();
   }, [targetUser?.id]);
 
+  // Add delete message function
+  const handleDeleteMessage = async (messageId: string) => {
+    if (!user) return;
+    
+    try {
+      // Delete message from Firestore
+      const messageRef = doc(db, 'messages', messageId);
+      await deleteDoc(messageRef);
+      
+      // Update last message in chat if needed
+      if (activeDM) {
+        const chatRef = doc(db, 'chats', activeDM);
+        const chatDoc = await getDoc(chatRef);
+        
+        if (chatDoc.exists()) {
+          const chatData = chatDoc.data();
+          // If deleted message was the last message, update chat
+          if (chatData.lastMessage === messages.find(m => m.id === messageId)?.content) {
+            const previousMessage = messages.find(m => m.id !== messageId);
+            await updateDoc(chatRef, {
+              lastMessage: previousMessage?.content || '',
+              lastMessageTime: previousMessage?.createdAt || new Date().toISOString()
+            });
+          }
+        }
+      }
+
+      toast.success('Message deleted');
+    } catch (error) {
+      console.error('Error deleting message:', error);
+      toast.error('Failed to delete message');
+    }
+  };
+
+  // Add delete conversation function
+  const handleDeleteConversation = async () => {
+    if (!user || !activeDM) return;
+    
+    try {
+      // Delete all messages
+      const messagesQuery = query(
+        collection(db, 'messages'),
+        where('chatId', '==', activeDM)
+      );
+      const messagesSnapshot = await getDocs(messagesQuery);
+      
+      await Promise.all(
+        messagesSnapshot.docs.map(doc => deleteDoc(doc.ref))
+      );
+      
+      // Update chat document
+      const chatRef = doc(db, 'chats', activeDM);
+      await updateDoc(chatRef, {
+        lastMessage: '',
+        lastMessageTime: new Date().toISOString(),
+        [`unreadCount.${user.uid}`]: 0
+      });
+
+      toast.success('Conversation deleted');
+      setShowChatMenu(false);
+    } catch (error) {
+      console.error('Error deleting conversation:', error);
+      toast.error('Failed to delete conversation');
+    }
+  };
+
+  // Add remove from DM list function
+  const handleRemoveFromDM = async () => {
+    if (!user || !activeDM) return;
+    
+    try {
+      const chatRef = doc(db, 'chats', activeDM);
+      await deleteDoc(chatRef);
+      
+      toast.success('Removed from messages');
+      navigate('/app/chat');
+      setShowChatMenu(false);
+    } catch (error) {
+      console.error('Error removing chat:', error);
+      toast.error('Failed to remove from messages');
+    }
+  };
+
+  // Subscribe to messages and handle notifications
+  useEffect(() => {
+    if (!user) return;
+
+    const messagesQuery = query(
+      collection(db, 'messages'),
+      where('recipientId', '==', user.uid),
+      orderBy('createdAt', 'desc'),
+      limit(1)
+    );
+
+    const unsubscribe = onSnapshot(messagesQuery, (snapshot) => {
+      snapshot.docChanges().forEach((change) => {
+        if (change.type === 'added') {
+          const message = change.doc.data();
+          // Only show notification if it's a new message and not from the current user
+          if (message.sender.id !== user.uid && new Date(message.createdAt).getTime() > Date.now() - 1000) {
+            // Show notification
+            if ('Notification' in window && Notification.permission === 'granted') {
+              new Notification('New Message', {
+                body: `${message.sender.name}: ${message.content}`,
+                icon: message.sender.avatar
+              });
+            } else if ('Notification' in window && Notification.permission !== 'denied') {
+              Notification.requestPermission().then(permission => {
+                if (permission === 'granted') {
+                  new Notification('New Message', {
+                    body: `${message.sender.name}: ${message.content}`,
+                    icon: message.sender.avatar
+                  });
+                }
+              });
+            }
+            // Play notification sound
+            const audio = new Audio('/notification.mp3');
+            audio.play().catch(e => console.log('Error playing sound:', e));
+          }
+        }
+      });
+    });
+
+    return () => unsubscribe();
+  }, [user]);
+
   return (
-    <div className="h-[100dvh] flex flex-col sm:flex-row sm:gap-8 bg-gray-50 overflow-hidden">
+    <div className="h-[100dvh] flex flex-col sm:flex-row sm:gap-6 bg-gray-50/50 overflow-hidden p-0 sm:p-6">
         {/* Sidebar */}
-      <Card className={`w-full sm:w-96 flex flex-col h-[100dvh] sm:h-[calc(100dvh-4rem)] rounded-none sm:rounded-xl ${!showSidebar ? 'hidden sm:flex' : ''}`}>
-        <div className="sticky top-0 z-10 p-2 sm:p-6 border-b flex-shrink-0 bg-white">
-          <h2 className="text-xl font-semibold px-2 sm:px-0">Chats</h2>
+      <Card className={`w-full sm:w-[380px] flex flex-col h-[100dvh] sm:h-[calc(100dvh-3rem)] rounded-none sm:rounded-2xl border-0 sm:border ${!showSidebar ? 'hidden sm:flex' : ''}`}>
+        <div className="sticky top-0 z-10 px-4 py-4 sm:p-6 border-b border-gray-100 flex-shrink-0 bg-white">
+          <h2 className="text-lg font-medium text-gray-900">Messages</h2>
         </div>
-        <div className="flex-1 overflow-y-auto p-2 sm:p-6">
+        
+        <div className="flex-1 overflow-y-auto p-2 sm:p-4">
           {/* Projects List */}
-          <div className="space-y-2 sm:space-y-3">
+          <div className="space-y-1">
             {projects.map((project) => (
               <button
                 key={project.id}
                 onClick={() => handleProjectClick(project.id)}
-                className={`w-full p-2 sm:p-4 rounded-xl flex items-center gap-2 sm:gap-4 hover:bg-gray-50 transition-colors ${
-                  activeProject === project.id ? 'bg-primary-50 border border-primary-200' : ''
+                className={`w-full p-3 rounded-xl flex items-center gap-3 hover:bg-gray-50/80 transition-colors ${
+                  activeProject === project.id ? 'bg-white shadow-sm border border-gray-100' : ''
                 }`}
               >
                 {project.coverImage ? (
                   <img
                     src={project.coverImage}
                     alt={project.title}
-                    className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg object-cover"
+                    className="w-10 h-10 rounded-lg object-cover"
                   />
                 ) : (
-                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-br from-primary-100 to-primary-200 flex items-center justify-center">
-                    <span className="text-base sm:text-lg">🎯</span>
+                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+                    <span className="text-base">🎯</span>
                   </div>
                 )}
                 <div className="flex-1 text-left">
-                  <h3 className="font-medium truncate text-sm sm:text-base">{project.title}</h3>
-                  <p className="text-xs sm:text-sm text-gray-500">
+                  <h3 className="font-medium text-gray-900 text-sm">{project.title}</h3>
+                  <p className="text-xs text-gray-500">
                     {project.members.length} members
                   </p>
                 </div>
@@ -961,50 +1158,93 @@ export function Chat() {
           </div>
 
               {/* Direct Messages */}
-          <div className="mt-4 sm:mt-8">
-            <h3 className="text-sm font-semibold text-gray-500 mb-2 sm:mb-3 px-2 sm:px-0">Direct Messages</h3>
-                <div className="space-y-1 sm:space-y-2">
+          <div className="mt-6">
+            <h3 className="text-xs font-medium text-gray-500 mb-3 px-2">Direct Messages</h3>
+            <div className="space-y-1">
                   {directMessages.map((dm) => (
+                <div key={dm.id} className="group flex items-center gap-2 px-1">
                     <button
-                      key={dm.id}
                       onClick={() => handleDMClick(dm)}
-                  className={`w-full p-2 sm:p-3 rounded-lg flex items-center gap-2 sm:gap-3 hover:bg-gray-50 transition-colors ${
-                        activeDM === dm.id ? 'bg-primary-50 border border-primary-200' : ''
+                    className={`flex-1 p-3 rounded-xl flex items-center gap-3 hover:bg-gray-50/80 transition-colors ${
+                      activeDM === dm.id ? 'bg-white shadow-sm border border-gray-100' : ''
                       }`}
                     >
                       {(userProfiles[dm.userId]?.avatar || dm.avatar) ? (
                         <img
                           src={userProfiles[dm.userId]?.avatar || dm.avatar}
                           alt={userProfiles[dm.userId]?.name || dm.name}
-                          className="w-8 h-8 rounded-full object-cover flex-shrink-0"
-                          style={{ aspectRatio: '1/1' }}
+                        className="w-10 h-10 rounded-full object-cover ring-2 ring-white"
                           onError={(e) => {
                             if (e.currentTarget instanceof HTMLImageElement) {
-                              e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(userProfiles[dm.userId]?.name || dm.name)}&background=random&size=32`;
+                            e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(userProfiles[dm.userId]?.name || dm.name)}&background=random`;
                             }
                           }}
                         />
                       ) : (
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary-50 to-primary-100 flex items-center justify-center flex-shrink-0">
-                          <span className="text-sm font-semibold text-primary-600">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gray-50 to-gray-100 ring-2 ring-white flex items-center justify-center">
+                        <span className="text-sm font-medium text-gray-900">
                             {(userProfiles[dm.userId]?.name || dm.name).charAt(0).toUpperCase()}
                           </span>
                         </div>
                       )}
-                      <div className="flex-1 text-left">
-                    <h4 className="font-medium text-sm sm:text-base">{userProfiles[dm.userId]?.name || dm.name}</h4>
+                    <div className="flex-1 text-left min-w-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <h4 className="font-medium text-gray-900 text-sm truncate">
+                          {userProfiles[dm.userId]?.name || dm.name}
+                        </h4>
+                        {dm.unreadCount > 0 && (
+                          <span className="flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-red-50 text-[11px] font-medium text-red-600">
+                            {dm.unreadCount > 99 ? '99+' : dm.unreadCount}
+                          </span>
+                        )}
+                      </div>
                         {dm.lastMessage && (
-                      <p className="text-xs sm:text-sm text-gray-500 truncate">
+                        <p className="text-xs text-gray-500 truncate">
                             {dm.lastMessage}
                           </p>
                         )}
                       </div>
-                      {dm.unreadCount > 0 && (
-                        <span className="px-2 py-1 text-xs font-medium bg-primary-100 text-primary-600 rounded-full">
-                          {dm.unreadCount}
-                        </span>
-                      )}
                     </button>
+                  
+                  {/* Menu for each DM */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveDM(dm.id);
+                      setShowChatMenu(!showChatMenu);
+                    }}
+                    className="p-2 rounded-lg text-gray-400 opacity-0 group-hover:opacity-100 hover:bg-gray-50 hover:text-gray-600 transition-all"
+                  >
+                    <EllipsisVerticalIcon className="w-5 h-5" />
+                  </button>
+                  
+                  {showChatMenu && activeDM === dm.id && (
+                    <div className="absolute right-0 mt-2 w-48 rounded-xl bg-white border border-gray-100">
+                      <div className="py-1">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteConversation();
+                          }}
+                          className="w-full px-4 py-2.5 text-left text-sm text-gray-600 hover:bg-gray-50/80 hover:text-gray-900 transition-colors flex items-center gap-2"
+                        >
+                          <TrashIcon className="w-4 h-4" />
+                          Delete conversation
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRemoveFromDM();
+                          }}
+                          className="w-full px-4 py-2.5 text-left text-sm text-red-500 hover:bg-red-50/80 hover:text-red-600 transition-colors flex items-center gap-2"
+                        >
+                          <XMarkIcon className="w-4 h-4" />
+                          Remove from messages
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
                   ))}
               </div>
             </div>
@@ -1012,12 +1252,11 @@ export function Chat() {
         </Card>
 
         {/* Chat Area */}
-      <Card className={`w-full flex-1 flex flex-col h-[100dvh] sm:h-[calc(100dvh-4rem)] rounded-none sm:rounded-xl ${showSidebar ? 'hidden sm:flex' : 'flex'}`}>
+      <Card className={`w-full flex-1 flex flex-col h-[100dvh] sm:h-[calc(100dvh-3rem)] rounded-none sm:rounded-2xl border-0 sm:border ${showSidebar ? 'hidden sm:flex' : 'flex'}`}>
           {(activeProject || activeDM || chatId) ? (
             <>
               {/* Chat Header */}
-            <div className="sticky top-0 z-20 px-3 sm:px-6 py-2 sm:py-4 border-b flex-shrink-0 bg-white">
-                <div className="flex items-center justify-between">
+            <div className="sticky top-0 z-20 px-4 py-3 sm:p-4 border-b border-gray-100 flex-shrink-0 bg-white">
                   <div className="flex items-center gap-3">
                   {/* Back Button for Mobile */}
                   <button
@@ -1033,80 +1272,58 @@ export function Chat() {
                         <img
                           src={projects.find(p => p.id === activeProject)?.coverImage}
                           alt={projects.find(p => p.id === activeProject)?.title}
-                          className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg object-cover"
+                        className="w-10 h-10 rounded-lg object-cover"
                         />
                       ) : (
-                        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-br from-primary-100 to-primary-200 flex items-center justify-center">
-                          <span className="text-base sm:text-lg">🎯</span>
+                      <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+                        <span className="text-base">🎯</span>
                         </div>
                       )}
                       <div>
-                        <h2 className="font-semibold text-sm sm:text-base">
+                      <h2 className="font-medium text-gray-900">
                           {projects.find(p => p.id === activeProject)?.title}
                         </h2>
-                        <p className="text-xs sm:text-sm text-gray-500">
+                      <p className="text-sm text-gray-500">
                           {projects.find(p => p.id === activeProject)?.members.length} members
                         </p>
                       </div>
                     </div>
                   )}
+
                   {(chatType === 'dm' || chatId) && targetUser && (
                     <div className="flex items-center gap-3">
                         {(userProfiles[targetUser.id]?.avatar || targetUser.avatar) ? (
                           <img
                             src={userProfiles[targetUser.id]?.avatar || targetUser.avatar}
                             alt={userProfiles[targetUser.id]?.name || targetUser.name}
-                          className="w-8 h-8 sm:w-10 sm:h-10 rounded-full object-cover"
+                        className="w-10 h-10 rounded-full object-cover ring-2 ring-white"
                           onError={(e) => {
                             if (e.currentTarget instanceof HTMLImageElement && targetUser) {
-                              e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(userProfiles[targetUser.id]?.name || targetUser.name)}&background=random&size=40`;
+                            e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(userProfiles[targetUser.id]?.name || targetUser.name)}&background=random`;
                             }
                           }}
                           />
                         ) : (
-                        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-primary-50 to-primary-100 flex items-center justify-center">
-                          <span className="text-base sm:text-lg font-semibold text-primary-600">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gray-50 to-gray-100 ring-2 ring-white flex items-center justify-center">
+                        <span className="text-base font-medium text-gray-900">
                               {(userProfiles[targetUser.id]?.name || targetUser.name).charAt(0).toUpperCase()}
                             </span>
                           </div>
                         )}
-                      <h2 className="font-semibold text-sm sm:text-base">
+                    <h2 className="font-medium text-gray-900">
                         {userProfiles[targetUser.id]?.name || targetUser.name || directMessages.find(d => d.userId === activeDM)?.name || 'Loading...'}
                       </h2>
                         </div>
                     )}
-                  </div>
-
-                {/* Search Bar */}
-                <div className="relative flex-1 max-w-md ml-4 hidden sm:block">
-                  <div className="relative">
-                    <input
-                      type="text"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder="Search in conversation..."
-                      className="w-full pl-10 pr-4 py-2 rounded-lg border bg-gray-50 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                    />
-                    <MagnifyingGlassIcon className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                    {searchQuery && (
-                      <button
-                        onClick={() => setSearchQuery('')}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                      >
-                        <XMarkIcon className="w-5 h-5" />
-                      </button>
-                    )}
-                  </div>
-                </div>
                 </div>
               </div>
 
               {/* Messages */}
-            <div className="flex-1 overflow-y-auto px-2 sm:px-6 py-2 sm:py-4 space-y-2 sm:space-y-6 max-h-[calc(100dvh-8.5rem)] sm:max-h-none">
+            <div className="flex-1 overflow-y-auto px-4 py-6 space-y-6">
                 {groupedMessages.map((group) => (
-                <div key={group.date} className="space-y-2 sm:space-y-6">
+                <div key={group.date} className="space-y-6">
                     <div className="text-center sticky top-2 z-10">
-                    <span className="px-2 sm:px-4 py-1 sm:py-1.5 text-xs font-medium bg-white/80 text-gray-600 rounded-full shadow-sm border backdrop-blur-sm">
+                    <span className="px-3 py-1 text-xs font-medium bg-white/90 text-gray-500 rounded-full shadow-sm border backdrop-blur-sm">
                         {format(new Date(group.date), 'MMMM d, yyyy')}
                       </span>
                     </div>
@@ -1114,7 +1331,7 @@ export function Chat() {
                       <div
                         key={message.id}
                       id={`message-${message.id}`}
-                      className={`flex items-start gap-2 sm:gap-4 ${
+                      className={`group flex items-start gap-3 ${
                         message.sender.id === user?.uid ? 'flex-row-reverse' : ''
                       }`}
                       >
@@ -1124,16 +1341,16 @@ export function Chat() {
                           <img
                             src={userProfiles[message.sender.id]?.avatar || message.sender.avatar}
                             alt={userProfiles[message.sender.id]?.name || message.sender.name}
-                            className="w-6 h-6 sm:w-8 sm:h-8 rounded-full object-cover border-2 border-white shadow-sm"
+                            className="w-8 h-8 rounded-full object-cover ring-2 ring-white"
                             onError={(e) => {
                               if (e.currentTarget instanceof HTMLImageElement) {
-                                e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(userProfiles[message.sender.id]?.name || message.sender.name)}&background=random&size=32`;
+                                e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(userProfiles[message.sender.id]?.name || message.sender.name)}&background=random`;
                               }
                             }}
                             />
                           ) : (
-                          <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-gradient-to-br from-primary-50 to-primary-100 flex items-center justify-center border-2 border-white shadow-sm">
-                            <span className="text-xs sm:text-sm font-semibold text-primary-600">
+                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-gray-50 to-gray-100 ring-2 ring-white flex items-center justify-center">
+                            <span className="text-xs font-medium text-gray-900">
                               {(userProfiles[message.sender.id]?.name || message.sender.name).charAt(0).toUpperCase()}
                               </span>
                             </div>
@@ -1141,25 +1358,25 @@ export function Chat() {
                         </div>
 
                         {/* Message Content */}
-                      <div className={`group relative max-w-[80%] sm:max-w-[65%]`}>
+                      <div className={`group relative max-w-[75%]`}>
                         {message.sender.id !== user?.uid && (
                           <p className="text-xs font-medium text-gray-500 mb-1 ml-1">
                             {userProfiles[message.sender.id]?.name || message.sender.name}
                           </p>
                         )}
                         <div
-                          className={`relative rounded-2xl px-4 sm:px-5 py-2 sm:py-3 ${
+                          className={`relative rounded-2xl px-4 py-3 ${
                             message.sender.id === user?.uid
-                              ? 'bg-primary-100 text-primary-900 border border-primary-200'
+                              ? 'bg-gray-100 text-gray-900 border border-gray-200'
                               : 'bg-white text-gray-900 border border-gray-100'
                           }`}
                         >
                           {/* Reply Preview */}
                           {message.replyTo && (
-                            <div className={`mb-2 sm:mb-3 p-2 sm:p-3 rounded-xl text-xs sm:text-sm ${
+                            <div className={`mb-2 p-2 rounded-xl text-sm ${
                               message.sender.id === user?.uid
-                                ? 'bg-primary-50/70 border border-primary-200'
-                                : 'bg-gray-50/70 border border-gray-200'
+                                ? 'bg-white/80 border border-gray-200'
+                                : 'bg-gray-50 border border-gray-100'
                             }`}>
                               <p className="font-medium text-xs mb-0.5">{message.replyTo.sender.name}</p>
                               <p className="text-gray-600 line-clamp-2">{message.replyTo.content}</p>
@@ -1167,7 +1384,7 @@ export function Chat() {
                           )}
 
                           {/* Message Text */}
-                          <div className="text-sm sm:text-base whitespace-pre-wrap break-words">
+                          <div className="text-sm whitespace-pre-wrap break-words">
                             {message.content}
                           </div>
                           
@@ -1194,7 +1411,7 @@ export function Chat() {
 
                           {/* Reactions */}
                           {message.reactions && message.reactions.length > 0 && (
-                            <div className="absolute -bottom-3 left-4 flex -space-x-1">
+                            <div className="absolute -bottom-2 left-4 flex -space-x-1">
                               {Object.entries(
                                 message.reactions.reduce((acc: Record<string, string[]>, reaction) => {
                                   if (!acc[reaction.emoji]) {
@@ -1218,25 +1435,34 @@ export function Chat() {
 
                         {/* Message Actions */}
                         <div className={`absolute top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity ${
-                          message.sender.id === user?.uid ? '-left-24 sm:-left-28' : '-right-24 sm:-right-28'
+                          message.sender.id === user?.uid ? '-left-24' : '-right-24'
                         }`}>
-                          <div className="flex items-center gap-1 sm:gap-2 bg-white rounded-xl shadow-sm border p-1 sm:p-1.5">
+                          <div className="flex items-center gap-1 bg-white rounded-xl shadow-sm border p-1.5">
                             <button
                               onClick={() => setReplyingTo(message)}
-                              className="p-1 sm:p-1.5 rounded-lg hover:bg-gray-100"
+                              className="p-1.5 rounded-lg hover:bg-gray-50"
                               title="Reply"
                             >
-                              <ArrowUturnLeftIcon className="w-3 h-3 sm:w-4 sm:h-4 text-gray-500" />
+                              <ArrowUturnLeftIcon className="w-4 h-4 text-gray-400" />
                             </button>
-                            <div className="flex items-center gap-0.5 sm:gap-1">
-                              {['👍', '❤️', '😊', '🎉', '👏', '🚀'].map((emoji) => (
+                            {message.sender.id === user?.uid && (
+                              <button
+                                onClick={() => handleDeleteMessage(message.id)}
+                                className="p-1.5 rounded-lg hover:bg-gray-50 hover:text-red-500"
+                                title="Delete"
+                              >
+                                <TrashIcon className="w-4 h-4" />
+                              </button>
+                            )}
+                            <div className="flex items-center gap-0.5">
+                              {['👍', '❤️', '😊', '🎉', '👏', '��'].map((emoji) => (
                                 <button
                                   key={emoji}
                                   onClick={() => handleAddReaction(message.id, emoji)}
-                                  className="p-1 sm:p-1.5 rounded-lg hover:bg-gray-100"
+                                  className="p-1.5 rounded-lg hover:bg-gray-50"
                                   title={`React with ${emoji}`}
                                 >
-                                  <span className="text-xs sm:text-sm">{emoji}</span>
+                                  <span className="text-sm">{emoji}</span>
                                 </button>
                               ))}
                             </div>
@@ -1251,26 +1477,26 @@ export function Chat() {
               </div>
 
               {/* Message Input */}
-            <div className="sticky bottom-0 z-20 w-full px-2 sm:px-6 py-2 sm:py-4 border-t flex-shrink-0 bg-white">
+            <div className="sticky bottom-0 z-20 w-full px-4 py-4 border-t border-gray-100 flex-shrink-0 bg-white">
               {/* Reply Preview */}
               {replyingTo && (
-                <div className="mb-2 sm:mb-3 p-2 sm:p-3 bg-gray-50 rounded-xl border flex items-center justify-between">
+                <div className="mb-3 p-3 bg-gray-50 rounded-xl border flex items-center justify-between">
                   <div className="flex-1">
-                    <p className="text-xs sm:text-sm font-medium text-gray-900">
+                    <p className="text-sm font-medium text-gray-900">
                       Replying to {replyingTo.sender.name}
                     </p>
-                    <p className="text-xs sm:text-sm text-gray-500 truncate">{replyingTo.content}</p>
+                    <p className="text-sm text-gray-500 truncate">{replyingTo.content}</p>
                   </div>
                   <button
                     onClick={() => setReplyingTo(null)}
                     className="text-gray-400 hover:text-gray-600"
                   >
-                    <XMarkIcon className="w-4 h-4 sm:w-5 sm:h-5" />
+                    <XMarkIcon className="w-5 h-5" />
                   </button>
                 </div>
               )}
               
-              <div className="flex flex-col gap-2 sm:gap-3">
+              <div className="flex flex-col gap-3">
                 {/* Image Previews */}
                 {attachments.length > 0 && (
                   <div className="flex gap-2 overflow-x-auto pb-2">
@@ -1282,13 +1508,13 @@ export function Chat() {
                         <img
                           src={URL.createObjectURL(file)}
                           alt={file.name}
-                          className="w-16 h-16 sm:w-20 sm:h-20 object-cover"
+                          className="w-20 h-20 object-cover"
                         />
                         <button
                           onClick={() => setAttachments(prev => prev.filter((_, i) => i !== index))}
                           className="absolute top-1 right-1 p-1 rounded-full bg-black/50 text-white opacity-0 group-hover:opacity-100 transition-opacity"
                         >
-                          <XMarkIcon className="w-3 h-3 sm:w-4 sm:h-4" />
+                          <XMarkIcon className="w-4 h-4" />
                         </button>
                       </div>
                     ))}
@@ -1296,14 +1522,13 @@ export function Chat() {
                 )}
 
                 {/* Input Area */}
-                <div className="flex items-center gap-2 sm:gap-3">
+                <div className="flex items-center gap-3">
                   <div className="flex-1 relative flex items-center">
                     <textarea
                       ref={textareaRef}
                       value={newMessage}
                       onChange={(e) => {
                         setNewMessage(e.target.value);
-                        // Check if content needs multiple lines
                         const lines = e.target.value.split('\n');
                         const hasMultipleLines = lines.some(line => 
                           e.target.scrollWidth > e.target.clientWidth || lines.length > 1
@@ -1321,13 +1546,13 @@ export function Chat() {
                         }
                       }}
                       placeholder="Type a message..."
-                      className="w-full h-[40px] sm:h-[46px] max-h-[116px] px-4 pr-12 rounded-2xl border focus:outline-none focus:border-primary-500 resize-none bg-gray-50 text-sm pt-[10px] pb-[10px] sm:pt-[13px] sm:pb-[13px] overflow-hidden"
+                      className="w-full h-[46px] max-h-[116px] px-4 pr-12 rounded-xl border focus:outline-none focus:border-gray-300 resize-none bg-gray-50 text-sm py-3"
                       rows={1}
                     />
                     <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center">
                       <button
                         onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                        className="w-[36px] h-[36px] sm:w-[40px] sm:h-[40px] p-0 flex items-center justify-center hover:bg-gray-100 rounded-full"
+                        className="w-[40px] h-[40px] p-0 flex items-center justify-center hover:bg-gray-100 rounded-full"
                       >
                         <FaceSmileIcon className="w-5 h-5 text-gray-400 hover:text-gray-600" />
                       </button>
@@ -1340,7 +1565,7 @@ export function Chat() {
                       )}
                     </div>
                   </div>
-                  <div className="flex gap-1.5 sm:gap-2 self-end">
+                  <div className="flex gap-2 self-end">
                     <input
                       type="file"
                       ref={fileInputRef}
@@ -1353,17 +1578,17 @@ export function Chat() {
                       variant="outline"
                       onClick={() => fileInputRef.current?.click()}
                       disabled={isUploading}
-                      className="min-w-[40px] min-h-[40px] sm:min-w-[46px] sm:min-h-[46px] p-0 flex items-center justify-center rounded-2xl"
+                      className="min-w-[46px] min-h-[46px] p-0 flex items-center justify-center rounded-full"
                     >
-                      <PaperClipIcon className="w-4 h-4 sm:w-5 sm:h-5" />
+                      <PaperClipIcon className="w-5 h-5" />
                     </Button>
                     <Button
                       variant="primary"
                       onClick={handleSendMessage}
                       disabled={isUploading || (!newMessage.trim() && attachments.length === 0)}
-                      className="min-w-[40px] min-h-[40px] sm:min-w-[46px] sm:min-h-[46px] p-0 flex items-center justify-center rounded-2xl"
+                      className="min-w-[46px] min-h-[46px] p-0 flex items-center justify-center rounded-full"
                     >
-                      <PaperAirplaneIcon className="w-4 h-4 sm:w-5 sm:h-5" />
+                      <PaperAirplaneIcon className="w-5 h-5" />
                     </Button>
                   </div>
                 </div>
@@ -1371,13 +1596,13 @@ export function Chat() {
             </div>
             </>
           ) : (
-            <div className="flex-1 flex items-center justify-center p-4 sm:p-8">
+          <div className="flex-1 flex items-center justify-center p-8">
               <div className="text-center">
-                <div className="text-4xl sm:text-5xl mb-4 sm:mb-6">💬</div>
-                <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2 sm:mb-3">
+              <div className="text-5xl mb-6">💬</div>
+              <h3 className="text-xl font-medium text-gray-900 mb-3">
                   Select a chat to start messaging
                 </h3>
-                <p className="text-sm sm:text-lg text-gray-500">
+              <p className="text-base text-gray-500">
                   Choose a project or direct message from the sidebar
                 </p>
               </div>

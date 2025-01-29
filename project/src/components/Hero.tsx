@@ -1,8 +1,11 @@
-import { motion } from 'framer-motion';
+import { motion, useScroll, useTransform } from 'framer-motion';
 import { Container } from './layout/Container';
-import { GridBackground } from './ui/GridBackground';
 import { GradientText } from './ui/GradientText';
 import { AuthButton } from './ui/AuthButton';
+import { useRef } from 'react';
+import { HeroBackground } from './hero/HeroBackground';
+import { Button } from './ui/Button';
+import { UsersThree, ArrowRight } from '@phosphor-icons/react';
 
 const fadeInUpAnimation = {
   initial: { opacity: 0, y: 20 },
@@ -10,59 +13,68 @@ const fadeInUpAnimation = {
     opacity: 1, 
     y: 0,
     transition: {
-      duration: 0.6,
-      ease: "easeOut"
+      duration: 0.8,
+      ease: [0.22, 1, 0.36, 1]
     }
   }
 };
 
 export function Hero() {
+  const containerRef = useRef(null);
+  const { scrollY } = useScroll();
+  const y = useTransform(scrollY, [0, 300], [0, -50]);
+  const opacity = useTransform(scrollY, [0, 300], [1, 0]);
+
   return (
-    <section className="relative pt-24 md:pt-32 pb-16 md:pb-20 overflow-hidden">
-      <GridBackground />
-      
-      {/* Faded Grid Illustration */}
-      <div 
-        className="absolute inset-0 opacity-[0.03]"
-        style={{
-          backgroundSize: '30px 30px',
-          backgroundImage: `
-            linear-gradient(to right, rgba(0,0,0,0.05) 1px, transparent 1px),
-            linear-gradient(to bottom, rgba(0,0,0,0.05) 1px, transparent 1px)
-          `
-        }}
-      />
-      <div className="absolute inset-0">
-        <div className="h-full w-full bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-primary-500/10 via-transparent to-transparent opacity-40" />
-      </div>
+    <section className="relative min-h-[100vh] flex items-center justify-center -mt-16 overflow-hidden">
+      <HeroBackground />
       
       <Container className="relative">
-        <div className="max-w-4xl mx-auto text-center px-4 md:px-6">
+        <motion.div 
+          ref={containerRef}
+          className="max-w-5xl mx-auto text-center px-4 md:px-6"
+          style={{ y, opacity }}
+        >
           <motion.div
             variants={fadeInUpAnimation}
             initial="initial"
             animate="animate"
-            className="inline-block mb-4"
+            className="inline-block mb-8"
           >
-            <div className="relative px-4 py-1.5">
+            <motion.div 
+              className="relative px-4 py-1.5"
+              whileHover={{ scale: 1.02 }}
+              transition={{ duration: 0.2 }}
+            >
               <div className="absolute inset-0 bg-gradient-to-r from-primary-500/5 via-primary-500/10 to-primary-500/5 rounded-full blur-md" />
-              <div className="relative bg-white/80 backdrop-blur-sm px-4 py-1.5 rounded-full border border-primary-100">
+              <div className="relative bg-white/80 backdrop-blur-sm px-4 py-1.5 rounded-full border-2 border-primary-200/80">
                 <span className="text-sm font-medium text-primary-600 inline-flex items-center gap-2">
-                  <span className="opacity-80">🎉</span>
-                  The Best Collaboration Platform for Creative Teams
+                  <motion.span 
+                    className="opacity-80"
+                    animate={{ rotate: [0, 10, 0] }}
+                    transition={{ duration: 0.5, repeat: Infinity, repeatDelay: 2 }}
+                  >
+                    💡
+                  </motion.span>
+                  The Ultimate Creative Collaboration Platform
                 </span>
               </div>
-            </div>
+            </motion.div>
           </motion.div>
           
           <motion.h1 
             variants={fadeInUpAnimation}
             initial="initial"
             animate="animate"
-            className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-normal mb-6 md:mb-8 leading-tight"
+            className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold mb-10"
           >
-            Where Ideas <br/>
-            <GradientText>Transform</GradientText> into Reality
+            <div className="mb-3">Bring Your Ideas</div>
+            <motion.span
+              whileHover={{ scale: 1.05 }}
+              transition={{ duration: 0.2 }}
+            >
+              <GradientText>To Life</GradientText>
+            </motion.span>
           </motion.h1>
           
           <motion.p
@@ -70,9 +82,9 @@ export function Hero() {
             initial="initial"
             animate="animate"
             transition={{ delay: 0.1 }}
-            className="text-base sm:text-lg md:text-xl text-gray-600 mb-8 md:mb-12 max-w-2xl mx-auto px-4"
+            className="text-base sm:text-lg md:text-xl text-gray-600 mb-12 max-w-3xl mx-auto px-4"
           >
-            Experience seamless project collaboration through our modern platform
+            A community-driven platform where innovators, creators, and developers come together to transform ideas into reality. Say goodbye to scattered tools and hello to seamless collaboration in one digital workspace.
           </motion.p>
           
           <motion.div
@@ -80,17 +92,26 @@ export function Hero() {
             initial="initial"
             animate="animate"
             transition={{ delay: 0.2 }}
-            className="flex items-center justify-center"
+            className="flex items-center justify-center gap-4"
           >
-            <motion.div
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              transition={{ duration: 0.2 }}
+            <Button
+              variant="primary"
+              className="text-sm md:text-base group relative overflow-hidden"
+              href="/auth#signup"
             >
-              <AuthButton className="text-sm md:text-base" />
-            </motion.div>
+              <motion.div 
+                className="relative z-10 flex items-center gap-2"
+                whileHover={{ x: [0, 4, 0] }}
+                transition={{ duration: 0.3 }}
+              >
+                <UsersThree weight="duotone" className="w-5 h-5" />
+                Join Our Creative Community
+                <ArrowRight weight="bold" className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+              </motion.div>
+              <div className="absolute inset-0 bg-gradient-to-r from-primary-600 to-primary-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+            </Button>
           </motion.div>
-        </div>
+        </motion.div>
       </Container>
     </section>
   );

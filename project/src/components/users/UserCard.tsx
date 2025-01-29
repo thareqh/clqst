@@ -5,6 +5,7 @@ import { CountryFlag } from '../ui/CountryFlag';
 import { COUNTRIES } from '../auth/registration/data/countries';
 import type { User } from '../../types/user';
 import { useAuth } from '../../hooks/useAuth';
+import { FiClock } from 'react-icons/fi';
 
 interface UserCardProps {
   user: User;
@@ -21,35 +22,26 @@ export function UserCard({ user }: UserCardProps) {
 
   return (
     <Link to={profilePath}>
-      <Card className="group hover:shadow-lg transition-all h-full">
-        <div className="p-6">
+      <Card className="group border border-gray-200 hover:border-gray-300 transition-all h-full">
+        <div className="p-5">
           {/* Header Section */}
-          <div className="flex items-start gap-6 mb-6">
+          <div className="flex items-center gap-5">
             {/* Avatar */}
-            <div className="relative">
+            <div className="shrink-0">
               {user.avatar ? (
-                <div className="w-16 h-16 rounded-full overflow-hidden bg-gray-100">
+                <div className="w-14 h-14 rounded-full overflow-hidden bg-gray-100 ring-2 ring-gray-100">
                   <img
                     src={user.avatar}
                     alt={user.fullName}
                     className="w-full h-full object-cover"
                     onError={(e) => {
-                      console.error('Error loading avatar:', e);
                       const target = e.currentTarget;
                       const parent = target.parentElement;
-                      
-                      // Log untuk debugging
-                      console.log('Avatar load error for:', user.fullName);
-                      console.log('Avatar URL:', user.avatar);
-                      
-                      // Hapus gambar yang error
                       target.remove();
-                      
-                      // Tambahkan fallback dengan inisial
                       if (parent) {
                         parent.classList.add('bg-gradient-to-br', 'from-primary-100', 'to-primary-200', 'flex', 'items-center', 'justify-center');
                         const span = document.createElement('span');
-                        span.className = 'text-2xl text-primary-700';
+                        span.className = 'text-xl text-primary-700 font-medium';
                         span.textContent = user.fullName.charAt(0).toUpperCase();
                         parent.appendChild(span);
                       }
@@ -57,8 +49,8 @@ export function UserCard({ user }: UserCardProps) {
                   />
                 </div>
               ) : (
-                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary-100 to-primary-200 flex items-center justify-center">
-                  <span className="text-2xl text-primary-700">
+                <div className="w-14 h-14 rounded-full bg-gradient-to-br from-primary-100 to-primary-200 flex items-center justify-center ring-2 ring-gray-100">
+                  <span className="text-xl text-primary-700 font-medium">
                     {user.fullName.charAt(0).toUpperCase()}
                   </span>
                 </div>
@@ -66,30 +58,45 @@ export function UserCard({ user }: UserCardProps) {
             </div>
 
             {/* User Info */}
-            <div className="flex-1">
-              <h4 className="text-xl font-medium mb-1 group-hover:text-primary-600 transition-colors">
+            <div className="flex-1 min-w-0">
+              <h4 className="text-base font-semibold text-gray-900 mb-0.5 truncate group-hover:text-primary-600 transition-colors">
                 {user.fullName}
               </h4>
-              <p className="text-gray-600 mb-2">{user.professionalTitle}</p>
-              <div className="flex items-center gap-2 text-sm text-gray-500">
-                {countryCode && <CountryFlag countryCode={countryCode} />}
-                <span>{user.location}</span>
+              <p className="text-sm text-gray-600 mb-1.5 truncate">{user.professionalTitle}</p>
+              <div className="flex items-center flex-wrap gap-2 text-xs text-gray-500">
+                {countryCode && (
+                  <div className="flex items-center gap-1">
+                    <CountryFlag countryCode={countryCode} />
+                    <span className="truncate">{user.location}</span>
+                  </div>
+                )}
+                {user.experienceLevel && (
+                  <div className="flex items-center gap-1">
+                    <span className="w-1 h-1 bg-gray-300 rounded-full"/>
+                    <span>{user.experienceLevel}</span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
 
           {/* Skills Section */}
           {user.skills.length > 0 && (
-            <div>
+            <div className="mt-4 pt-4 border-t border-gray-100">
               <div className="flex flex-wrap gap-2">
-                {user.skills.map((skill) => (
+                {user.skills.slice(0, 5).map((skill) => (
                   <span
                     key={skill}
-                    className="px-3 py-1 bg-gray-100 rounded-full text-sm"
+                    className="px-2.5 py-1 bg-gray-50 border border-gray-200 text-gray-600 rounded-full text-xs"
                   >
                     {skill}
                   </span>
                 ))}
+                {user.skills.length > 5 && (
+                  <span className="px-2.5 py-1 bg-gray-50 border border-gray-200 text-gray-400 rounded-full text-xs">
+                    +{user.skills.length - 5}
+                  </span>
+                )}
               </div>
             </div>
           )}

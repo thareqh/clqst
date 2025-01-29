@@ -9,6 +9,7 @@ import type { SearchResult } from '../../../../types/search';
 import type { Project } from '../../../../types/project';
 import type { User } from '../../../../types/user';
 import { Tab } from '@headlessui/react';
+import { Separator } from '../../../../components/ui/Separator';
 import clsx from 'clsx';
 
 type FilterType = 'all' | 'project' | 'user';
@@ -63,31 +64,31 @@ export default function Explore() {
   const userResults = results.filter(result => result.type === 'user');
 
   const renderSkeletons = () => (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       {[...Array(6)].map((_, index) => (
-        <Card key={index} className="h-[360px] animate-pulse">
-          <div className="relative w-full pt-[56.25%] bg-gray-100" />
+        <div key={index} className="border rounded-lg overflow-hidden">
+          <div className="relative w-full pt-[56.25%] bg-gray-50" />
           <div className="p-6">
-            <div className="h-6 bg-gray-200 rounded w-3/4 mb-4" />
-            <div className="h-4 bg-gray-200 rounded w-full mb-2" />
-            <div className="h-4 bg-gray-200 rounded w-2/3 mb-4" />
+            <div className="h-6 bg-gray-100 rounded w-3/4 mb-4" />
+            <div className="h-4 bg-gray-100 rounded w-full mb-2" />
+            <div className="h-4 bg-gray-100 rounded w-2/3 mb-4" />
             <div className="flex gap-2 mt-4">
-              <div className="h-6 bg-gray-200 rounded w-16" />
-              <div className="h-6 bg-gray-200 rounded w-16" />
+              <div className="h-6 bg-gray-100 rounded w-16" />
+              <div className="h-6 bg-gray-100 rounded w-16" />
             </div>
           </div>
-        </Card>
+        </div>
       ))}
     </div>
   );
 
   const renderEmptyState = () => (
-    <Card className="p-8 text-center">
-      <h3 className="text-lg font-medium text-gray-900 mb-2">No results found</h3>
+    <div className="border rounded-lg p-8 text-center">
+      <h3 className="text-lg font-medium text-gray-900 mb-2">Tidak ada hasil ditemukan</h3>
       <p className="text-gray-600">
-        Try adjusting your search or filters to find what you're looking for
+        Coba sesuaikan pencarian atau filter Anda untuk menemukan yang Anda cari
       </p>
-    </Card>
+    </div>
   );
 
   return (
@@ -106,6 +107,8 @@ export default function Explore() {
         />
       </div>
 
+      <Separator className="my-6" />
+
       {/* Active Filters */}
       {(filters.skills.length > 0 || filters.projectTypes.length > 0 || filters.languages.length > 0 || filters.availability !== 'any') && (
         <div className="mb-6">
@@ -113,7 +116,7 @@ export default function Explore() {
             {filters.skills.map(skill => (
               <span
                 key={`skill-${skill}`}
-                className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-primary-50 text-primary-700"
+                className="inline-flex items-center px-3 py-1 border rounded-full text-sm text-gray-700 bg-gray-50"
               >
                 <span>{skill}</span>
                 <button
@@ -121,7 +124,7 @@ export default function Explore() {
                     ...filters,
                     skills: filters.skills.filter(s => s !== skill)
                   })}
-                  className="ml-2 focus:outline-none"
+                  className="ml-2 focus:outline-none hover:text-gray-900"
                 >
                   ×
                 </button>
@@ -130,7 +133,7 @@ export default function Explore() {
             {filters.projectTypes.map(type => (
               <span
                 key={`type-${type}`}
-                className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-secondary-50 text-secondary-700"
+                className="inline-flex items-center px-3 py-1 border rounded-full text-sm text-gray-700 bg-gray-50"
               >
                 <span>{type}</span>
                 <button
@@ -138,7 +141,7 @@ export default function Explore() {
                     ...filters,
                     projectTypes: filters.projectTypes.filter(t => t !== type)
                   })}
-                  className="ml-2 focus:outline-none"
+                  className="ml-2 focus:outline-none hover:text-gray-900"
                 >
                   ×
                 </button>
@@ -147,7 +150,7 @@ export default function Explore() {
             {filters.languages.map(language => (
               <span
                 key={`language-${language}`}
-                className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-tertiary-50 text-tertiary-700"
+                className="inline-flex items-center px-3 py-1 border rounded-full text-sm text-gray-700 bg-gray-50"
               >
                 <span>{language}</span>
                 <button
@@ -155,7 +158,7 @@ export default function Explore() {
                     ...filters,
                     languages: filters.languages.filter(l => l !== language)
                   })}
-                  className="ml-2 focus:outline-none"
+                  className="ml-2 focus:outline-none hover:text-gray-900"
                 >
                   ×
                 </button>
@@ -163,7 +166,7 @@ export default function Explore() {
             ))}
             {filters.availability !== 'any' && (
               <span
-                className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-gray-100 text-gray-700"
+                className="inline-flex items-center px-3 py-1 border rounded-full text-sm text-gray-700 bg-gray-50"
               >
                 <span>Availability: {filters.availability}</span>
                 <button
@@ -171,27 +174,28 @@ export default function Explore() {
                     ...filters,
                     availability: 'any'
                   })}
-                  className="ml-2 focus:outline-none"
+                  className="ml-2 focus:outline-none hover:text-gray-900"
                 >
                   ×
                 </button>
               </span>
             )}
           </div>
+          <Separator className="my-6" />
         </div>
       )}
 
       {/* Tabs */}
       <Tab.Group selectedIndex={selectedTab} onChange={setSelectedTab}>
-        <Tab.List className="flex space-x-1 rounded-xl bg-gray-100 p-1 mb-6">
+        <Tab.List className="flex border rounded-lg mb-6 bg-gray-100 divide-x divide-gray-200">
           <Tab
             className={({ selected }) =>
               clsx(
-                'w-full rounded-lg py-2.5 text-sm font-medium leading-5 flex items-center justify-center gap-2',
-                'ring-white ring-opacity-60 ring-offset-2 ring-offset-primary-400 focus:outline-none focus:ring-2',
+                'w-full py-2.5 text-sm font-medium leading-5 flex items-center justify-center transition-all duration-200',
+                'focus:outline-none',
                 selected
-                  ? 'bg-white text-primary-700 shadow'
-                  : 'text-gray-600 hover:bg-white/[0.12] hover:text-gray-800'
+                  ? 'bg-white text-gray-900 rounded-l-lg'
+                  : 'text-gray-700 hover:text-gray-900 hover:bg-gray-50'
               )
             }
           >
@@ -200,11 +204,11 @@ export default function Explore() {
           <Tab
             className={({ selected }) =>
               clsx(
-                'w-full rounded-lg py-2.5 text-sm font-medium leading-5 flex items-center justify-center gap-2',
-                'ring-white ring-opacity-60 ring-offset-2 ring-offset-primary-400 focus:outline-none focus:ring-2',
+                'w-full py-2.5 text-sm font-medium leading-5 flex items-center justify-center transition-all duration-200',
+                'focus:outline-none',
                 selected
-                  ? 'bg-white text-primary-700 shadow'
-                  : 'text-gray-600 hover:bg-white/[0.12] hover:text-gray-800'
+                  ? 'bg-white text-gray-900 rounded-r-lg'
+                  : 'text-gray-700 hover:text-gray-900 hover:bg-gray-50'
               )
             }
           >
@@ -213,19 +217,42 @@ export default function Explore() {
         </Tab.List>
 
         <Tab.Panels>
-          {/* Projects Panel */}
-          <Tab.Panel>
+          <Tab.Panel
+            className={clsx(
+              'rounded-xl focus:outline-none'
+            )}
+          >
             {isLoading ? (
-              renderSkeletons()
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-[1400px] mx-auto">
+                {[...Array(6)].map((_, index) => (
+                  <div key={index} className="border rounded-lg overflow-hidden">
+                    <div className="relative w-full pt-[56.25%] bg-gray-50" />
+                    <div className="p-6">
+                      <div className="h-6 bg-gray-100 rounded w-3/4 mb-4" />
+                      <div className="h-4 bg-gray-100 rounded w-full mb-2" />
+                      <div className="h-4 bg-gray-100 rounded w-2/3 mb-4" />
+                      <div className="flex gap-2 mt-4">
+                        <div className="h-6 bg-gray-100 rounded w-16" />
+                        <div className="h-6 bg-gray-100 rounded w-16" />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             ) : projectResults.length === 0 ? (
-              renderEmptyState()
+              <div className="border-2 border-dashed border-gray-200 rounded-lg p-8 text-center">
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No results found</h3>
+                <p className="text-gray-500">
+                  Try adjusting your search or filters to find what you're looking for
+                </p>
+              </div>
             ) : (
               <motion.div
                 key="project-results"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
-                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+                className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-[1400px] mx-auto"
               >
                 {projectResults.map((result, index) => (
                   <motion.div
@@ -239,7 +266,7 @@ export default function Explore() {
                         id: result.id,
                         title: result.title || '',
                         description: result.description || '',
-                        shortDescription: result.description || '',
+                        shortDescription: result.shortDescription || result.description?.slice(0, 150) || '',
                         coverImage: result.coverImage || '/images/project-placeholder.jpg',
                         status: result.status === 'in-progress' ? 'open' : (result.status as 'open' | 'closed' | 'completed' | 'archived') || 'open',
                         skills: result.tags || [],
@@ -253,13 +280,17 @@ export default function Explore() {
                           name: member.name,
                           avatar: member.avatar || undefined,
                           role: member.role,
+                          skills: member.skills || [],
                           joinedAt: member.joinedAt || result.createdAt
                         })) || [],
                         phase: (result.phase as 'idea' | 'prototype' | 'development' | 'growth' | 'maintenance') || 'idea',
                         category: (result.category as 'web' | 'mobile' | 'desktop' | 'other') || 'other',
                         visibility: result.visibility || 'public',
                         tags: result.tags || [],
-                        requiredRoles: result.requiredRoles || [],
+                        requiredRoles: result.requiredRoles?.map(role => ({
+                          ...role,
+                          color: role.color || '#94A3B8'
+                        })) || [],
                         createdAt: result.createdAt,
                         updatedAt: result.createdAt
                       }}
@@ -270,12 +301,20 @@ export default function Explore() {
             )}
           </Tab.Panel>
 
-          {/* Users Panel */}
-          <Tab.Panel>
+          <Tab.Panel
+            className={clsx(
+              'rounded-xl focus:outline-none'
+            )}
+          >
             {isLoading ? (
               renderSkeletons()
             ) : userResults.length === 0 ? (
-              renderEmptyState()
+              <div className="border-2 border-dashed border-gray-200 rounded-lg p-8 text-center">
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No results found</h3>
+                <p className="text-gray-500">
+                  Try adjusting your search or filters to find what you're looking for
+                </p>
+              </div>
             ) : (
               <motion.div
                 key="user-results"

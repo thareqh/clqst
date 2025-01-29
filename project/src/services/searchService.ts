@@ -52,6 +52,7 @@ interface ProjectData extends DocumentData {
     skills: string[];
     isRequired: boolean;
   }>;
+  shortDescription?: string;
 }
 
 interface UserData extends DocumentData {
@@ -120,6 +121,7 @@ export async function search({ query: searchQuery, type = 'all', skills = [], pr
             type: 'project' as const,
             title: data.title || '',
             description: data.description || '',
+            shortDescription: data.shortDescription || data.description?.slice(0, 150) || '',
             createdAt: data.createdAt,
             tags: data.skills || [],
             coverImage: data.coverImage,

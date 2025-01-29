@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Card } from '../../../../../components/ui/Card';
 import { Button } from '../../../../../components/ui/Button';
 import { FormInput } from '../../../../../components/auth/FormInput';
@@ -12,12 +13,15 @@ import { createProject } from '../../../../../services/projectService';
 import { uploadProjectImage } from '../../../../../services/storageService';
 import { ProjectImageUpload } from '../components/forms/ProjectImageUpload';
 import { ProjectRoleInput } from '../components/forms/ProjectRoleInput';
-import type { ProjectRole } from '../../../../../types/project';
+import { ProjectCard } from '../../../../../components/projects/ProjectCard';
+import { CategorySelect } from '../../../../../components/ui/CategorySelect';
+import type { Project, ProjectRole } from '../../../../../types/project';
 import { collection, addDoc, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/config/firebase';
 import { InformationCircleIcon, CheckIcon } from '@heroicons/react/24/solid';
 import { createSystemFolders } from '@/services/fileService';
 import { toast } from 'react-hot-toast';
+import { Dialog } from '@headlessui/react';
 
 interface Milestone {
   title: string;
@@ -77,12 +81,27 @@ const STEPS = [
   }
 ];
 
+const TooltipContent = ({ content }: { content: string }) => (
+  <motion.div
+    initial={{ opacity: 0, y: -10 }}
+    animate={{ opacity: 1, y: 0 }}
+    exit={{ opacity: 0, y: -10 }}
+    className="invisible group-hover:visible absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-64 p-3 bg-gray-900 text-white text-sm rounded-xl shadow-lg z-50"
+  >
+    <div className="relative">
+      {content}
+      <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 border-8 border-transparent border-t-gray-900" />
+    </div>
+  </motion.div>
+);
+
 export function CreateProject() {
   const navigate = useNavigate();
   const { currentUser, userProfile } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
   const [userProjectCount, setUserProjectCount] = useState(0);
+  const [showPreview, setShowPreview] = useState(false);
 
   useEffect(() => {
     const checkUserProjects = async () => {
@@ -184,15 +203,69 @@ export function CreateProject() {
     }
   };
 
+  const phaseMapping: Record<typeof formData.phase, Project['phase']> = {
+    'idea': 'idea',
+    'planning': 'prototype',
+    'development': 'development',
+    'testing': 'growth',
+    'launch': 'maintenance'
+  };
+
+  const getAvatarUrl = (profileImage: string | null | undefined): string | undefined => {
+    if (typeof profileImage === 'string') return profileImage;
+    return undefined;
+  };
+
+  const previewProject: Project = {
+    id: 'preview',
+    title: formData.title,
+    description: formData.description,
+    shortDescription: formData.shortDescription,
+    coverImage: formData.coverImage,
+    status: 'open',
+    phase: phaseMapping[formData.phase],
+    category: formData.category,
+    skills: formData.skills,
+    visibility: 'public',
+    tags: [],
+    requiredRoles: formData.requiredRoles,
+    owner: {
+      id: currentUser.uid,
+      name: userProfile.fullName,
+      avatar: getAvatarUrl(userProfile.profileImage)
+    },
+    members: [{
+      id: currentUser.uid,
+      name: userProfile.fullName,
+      avatar: getAvatarUrl(userProfile.profileImage),
+      role: 'owner',
+      joinedAt: new Date().toISOString(),
+      skills: formData.skills
+    }],
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
     if (!currentUser || !userProfile) return;
 
     if (!formData.title || !formData.shortDescription || !formData.description || 
         !formData.problemStatement || !formData.expectedOutcomes || !formData.targetAudience) {
+      toast.error('Please fill in all required fields');
       return;
     }
 
+    if (formData.skills.length === 0) {
+      toast.error('Please select at least one required skill');
+      return;
+    }
+
+    setShowPreview(true);
+  };
+
+  const handleConfirmSubmit = async () => {
     setIsLoading(true);
     try {
       const { websiteUrl, ...restData } = formData;
@@ -265,7 +338,6 @@ export function CreateProject() {
       );
 
       toast.success('Project created successfully');
-
       navigate('/app/projects');
     } catch (error) {
       console.error('Error creating project:', error);
@@ -303,12 +375,31 @@ export function CreateProject() {
   const renderStepContent = () => {
     switch (currentStep) {
       case 0:
-  return (
+        return (
           <div className="space-y-6">
-          <ProjectImageUpload
-            onImageSelect={handleImageSelect}
-            currentImage={formData.coverImage}
-          />
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <label className="block text-sm text-gray-600">
+                  Project Image
+                </label>
+                <div className="group relative">
+                  <motion.div
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="w-4 h-4 text-gray-400 cursor-help"
+                  >
+                    <InformationCircleIcon />
+                  </motion.div>
+                  <AnimatePresence>
+                    <TooltipContent content="Upload a representative image for your project to make it stand out" />
+                  </AnimatePresence>
+                </div>
+              </div>
+              <ProjectImageUpload
+                onImageSelect={handleImageSelect}
+                currentImage={formData.coverImage}
+              />
+            </div>
 
             <div>
               <div className="flex items-center gap-2 mb-2">
@@ -316,105 +407,128 @@ export function CreateProject() {
                   Project Title
                 </label>
                 <div className="group relative">
-                  <InformationCircleIcon className="w-4 h-4 text-gray-400 cursor-help" />
-                  <div className="invisible group-hover:visible absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg max-w-lg">
-                    {TOOLTIPS.title}
-                  </div>
+                  <motion.div
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="w-4 h-4 text-gray-400 cursor-help"
+                  >
+                    <InformationCircleIcon />
+                  </motion.div>
+                  <AnimatePresence>
+                    <TooltipContent content={TOOLTIPS.title} />
+                  </AnimatePresence>
                 </div>
               </div>
-          <FormInput
-            type="text"
+              <FormInput
+                type="text"
                 label=" "
-            value={formData.title}
-            onChange={(value) => setFormData({ ...formData, title: value })}
-            placeholder="Enter a clear, descriptive title"
-            required
-          />
+                value={formData.title}
+                onChange={(value) => setFormData({ ...formData, title: value })}
+                placeholder="Enter a clear, descriptive title"
+                required
+              />
             </div>
 
-          <div className="grid grid-cols-2 gap-6">
-            <div>
+            <div className="grid grid-cols-2 gap-6">
+              <div>
                 <div className="flex items-center gap-2 mb-2">
                   <label className="block text-sm text-gray-600">Category</label>
                   <div className="group relative">
-                    <InformationCircleIcon className="w-4 h-4 text-gray-400 cursor-help" />
-                    <div className="invisible group-hover:visible absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg max-w-lg">
-                      {TOOLTIPS.category}
-                    </div>
+                    <motion.div
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.95 }}
+                      className="w-4 h-4 text-gray-400 cursor-help"
+                    >
+                      <InformationCircleIcon />
+                    </motion.div>
+                    <AnimatePresence>
+                      <TooltipContent content={TOOLTIPS.category} />
+                    </AnimatePresence>
                   </div>
                 </div>
-              <select
-                value={formData.category}
-                onChange={(e) => setFormData({ ...formData, category: e.target.value as "web" | "mobile" | "desktop" | "other" })}
-                className="w-full px-4 py-2 rounded-xl border"
-                required
-              >
-                {PROJECT_CATEGORIES.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.icon} {category.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+                <CategorySelect
+                  value={formData.category}
+                  onChange={(category) => setFormData({ ...formData, category })}
+                  className="w-full"
+                />
+              </div>
 
-            <div>
+              <div>
                 <div className="flex items-center gap-2 mb-2">
                   <label className="block text-sm text-gray-600">Phase</label>
                   <div className="group relative">
-                    <InformationCircleIcon className="w-4 h-4 text-gray-400 cursor-help" />
-                    <div className="invisible group-hover:visible absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg max-w-lg">
-                      {TOOLTIPS.phase}
-                    </div>
+                    <motion.div
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.95 }}
+                      className="w-4 h-4 text-gray-400 cursor-help"
+                    >
+                      <InformationCircleIcon />
+                    </motion.div>
+                    <AnimatePresence>
+                      <TooltipContent content={TOOLTIPS.phase} />
+                    </AnimatePresence>
                   </div>
                 </div>
-              <select
-                value={formData.phase}
-                onChange={(e) => setFormData({ ...formData, phase: e.target.value as "idea" | "planning" | "development" | "testing" | "launch" })}
-                className="w-full px-4 py-2 rounded-xl border"
-                required
-              >
-                {PROJECT_PHASES.map((phase) => (
-                  <option key={phase.id} value={phase.id}>
-                    {phase.name}
-                  </option>
-                ))}
-              </select>
+                <select
+                  value={formData.phase}
+                  onChange={(e) => setFormData({ ...formData, phase: e.target.value as "idea" | "planning" | "development" | "testing" | "launch" })}
+                  className="w-full px-4 py-2 rounded-xl border"
+                  required
+                >
+                  {PROJECT_PHASES.map((phase) => (
+                    <option key={phase.id} value={phase.id}>
+                      {phase.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
-          </div>
 
-          <div>
+            <div>
               <div className="flex items-center gap-2 mb-2">
                 <label className="block text-sm text-gray-600">
-              Short Description
-            </label>
+                  Short Description
+                </label>
                 <div className="group relative">
-                  <InformationCircleIcon className="w-4 h-4 text-gray-400 cursor-help" />
-                  <div className="invisible group-hover:visible absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg max-w-lg">
-                    {TOOLTIPS.shortDescription}
-                  </div>
+                  <motion.div
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="w-4 h-4 text-gray-400 cursor-help"
+                  >
+                    <InformationCircleIcon />
+                  </motion.div>
+                  <AnimatePresence>
+                    <TooltipContent content={TOOLTIPS.shortDescription} />
+                  </AnimatePresence>
                 </div>
               </div>
-            <input
-              type="text"
-              value={formData.shortDescription}
-              onChange={(e) => setFormData({ ...formData, shortDescription: e.target.value })}
-              className="w-full px-4 py-2 rounded-xl border"
-              placeholder="Brief overview of your project (max 160 characters)"
-              maxLength={160}
-              required
-            />
-          </div>
+              <input
+                type="text"
+                value={formData.shortDescription}
+                onChange={(e) => setFormData({ ...formData, shortDescription: e.target.value })}
+                className="w-full px-4 py-2 rounded-xl border"
+                placeholder="Brief overview of your project (max 160 characters)"
+                maxLength={160}
+                required
+              />
+            </div>
 
-          <div>
+            <div>
               <div className="flex items-center gap-2 mb-2">
                 <label className="block text-sm text-gray-600">
                   Website URL <span className="text-gray-400">(Optional)</span>
                 </label>
                 <div className="group relative">
-                  <InformationCircleIcon className="w-4 h-4 text-gray-400 cursor-help" />
-                  <div className="invisible group-hover:visible absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg max-w-lg">
-                    {TOOLTIPS.websiteUrl}
-                  </div>
+                  <motion.div
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="w-4 h-4 text-gray-400 cursor-help"
+                  >
+                    <InformationCircleIcon />
+                  </motion.div>
+                  <AnimatePresence>
+                    <TooltipContent content={TOOLTIPS.websiteUrl} />
+                  </AnimatePresence>
                 </div>
               </div>
               <input
@@ -437,10 +551,16 @@ export function CreateProject() {
                   Problem Statement
                 </label>
                 <div className="group relative">
-                  <InformationCircleIcon className="w-4 h-4 text-gray-400 cursor-help" />
-                  <div className="invisible group-hover:visible absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg max-w-lg">
-                    {TOOLTIPS.problemStatement}
-                  </div>
+                  <motion.div
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="w-4 h-4 text-gray-400 cursor-help"
+                  >
+                    <InformationCircleIcon />
+                  </motion.div>
+                  <AnimatePresence>
+                    <TooltipContent content={TOOLTIPS.problemStatement} />
+                  </AnimatePresence>
                 </div>
               </div>
               <textarea
@@ -459,10 +579,16 @@ export function CreateProject() {
                   Expected Outcomes
                 </label>
                 <div className="group relative">
-                  <InformationCircleIcon className="w-4 h-4 text-gray-400 cursor-help" />
-                  <div className="invisible group-hover:visible absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg max-w-lg">
-                    {TOOLTIPS.expectedOutcomes}
-                  </div>
+                  <motion.div
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="w-4 h-4 text-gray-400 cursor-help"
+                  >
+                    <InformationCircleIcon />
+                  </motion.div>
+                  <AnimatePresence>
+                    <TooltipContent content={TOOLTIPS.expectedOutcomes} />
+                  </AnimatePresence>
                 </div>
               </div>
               <textarea
@@ -481,10 +607,16 @@ export function CreateProject() {
                   Target Audience
                 </label>
                 <div className="group relative">
-                  <InformationCircleIcon className="w-4 h-4 text-gray-400 cursor-help" />
-                  <div className="invisible group-hover:visible absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg max-w-lg">
-                    {TOOLTIPS.targetAudience}
-                  </div>
+                  <motion.div
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="w-4 h-4 text-gray-400 cursor-help"
+                  >
+                    <InformationCircleIcon />
+                  </motion.div>
+                  <AnimatePresence>
+                    <TooltipContent content={TOOLTIPS.targetAudience} />
+                  </AnimatePresence>
                 </div>
               </div>
               <textarea
@@ -500,24 +632,30 @@ export function CreateProject() {
             <div>
               <div className="flex items-center gap-2 mb-2">
                 <label className="block text-sm text-gray-600">
-              Full Description
-            </label>
+                  Full Description
+                </label>
                 <div className="group relative">
-                  <InformationCircleIcon className="w-4 h-4 text-gray-400 cursor-help" />
-                  <div className="invisible group-hover:visible absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg max-w-lg">
-                    {TOOLTIPS.description}
-                  </div>
+                  <motion.div
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="w-4 h-4 text-gray-400 cursor-help"
+                  >
+                    <InformationCircleIcon />
+                  </motion.div>
+                  <AnimatePresence>
+                    <TooltipContent content={TOOLTIPS.description} />
+                  </AnimatePresence>
                 </div>
               </div>
-            <textarea
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="w-full px-4 py-2 rounded-xl border"
-              rows={4}
-              placeholder="Detailed description of your project"
-              required
-            />
-          </div>
+              <textarea
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                className="w-full px-4 py-2 rounded-xl border"
+                rows={4}
+                placeholder="Detailed description of your project"
+                required
+              />
+            </div>
           </div>
         );
 
@@ -529,11 +667,18 @@ export function CreateProject() {
                 <label className="block text-sm text-gray-600">
                   Project Goals
                 </label>
+                <span className="text-gray-400 text-sm">(Optional)</span>
                 <div className="group relative">
-                  <InformationCircleIcon className="w-4 h-4 text-gray-400 cursor-help" />
-                  <div className="invisible group-hover:visible absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg max-w-lg">
-                    {TOOLTIPS.projectGoals}
-                  </div>
+                  <motion.div
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="w-4 h-4 text-gray-400 cursor-help"
+                  >
+                    <InformationCircleIcon />
+                  </motion.div>
+                  <AnimatePresence>
+                    <TooltipContent content={TOOLTIPS.projectGoals} />
+                  </AnimatePresence>
                 </div>
               </div>
               <div className="space-y-2">
@@ -582,11 +727,18 @@ export function CreateProject() {
                 <label className="block text-sm text-gray-600">
                   Milestones
                 </label>
+                <span className="text-gray-400 text-sm">(Optional)</span>
                 <div className="group relative">
-                  <InformationCircleIcon className="w-4 h-4 text-gray-400 cursor-help" />
-                  <div className="invisible group-hover:visible absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg max-w-lg">
-                    {TOOLTIPS.milestones}
-                  </div>
+                  <motion.div
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="w-4 h-4 text-gray-400 cursor-help"
+                  >
+                    <InformationCircleIcon />
+                  </motion.div>
+                  <AnimatePresence>
+                    <TooltipContent content={TOOLTIPS.milestones} />
+                  </AnimatePresence>
                 </div>
               </div>
               <div className="space-y-4">
@@ -664,146 +816,158 @@ export function CreateProject() {
                   Required Skills
                 </label>
                 <div className="group relative">
-                  <InformationCircleIcon className="w-4 h-4 text-gray-400 cursor-help" />
-                  <div className="invisible group-hover:visible absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg max-w-lg">
-                    {TOOLTIPS.skills}
-                  </div>
+                  <motion.div
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="w-4 h-4 text-gray-400 cursor-help"
+                  >
+                    <InformationCircleIcon />
+                  </motion.div>
+                  <AnimatePresence>
+                    <TooltipContent content={TOOLTIPS.skills} />
+                  </AnimatePresence>
                 </div>
               </div>
-          <SearchableMultiSelect
-            label="Required Skills"
-            options={SKILLS}
-            value={formData.skills}
-            onChange={(skills) => setFormData({ ...formData, skills })}
-            placeholder="Select required skills"
-          />
+              <SearchableMultiSelect
+                label="Required Skills"
+                options={SKILLS}
+                value={formData.skills}
+                onChange={(skills) => setFormData({ ...formData, skills })}
+                placeholder="Select required skills"
+              />
             </div>
 
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-              <h2 className="text-lg font-medium">Roles</h2>
+                  <h2 className="text-lg font-medium">Roles</h2>
                   <div className="group relative">
-                    <InformationCircleIcon className="w-4 h-4 text-gray-400 cursor-help" />
-                    <div className="invisible group-hover:visible absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg max-w-lg">
-                      {TOOLTIPS.roles}
+                    <motion.div
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.95 }}
+                      className="w-4 h-4 text-gray-400 cursor-help"
+                    >
+                      <InformationCircleIcon />
+                    </motion.div>
+                    <AnimatePresence>
+                      <TooltipContent content={TOOLTIPS.roles} />
+                    </AnimatePresence>
+                  </div>
+                </div>
+                <span className="text-sm text-gray-500">(Optional)</span>
+              </div>
+              
+              {formData.requiredRoles.map((role, index) => (
+                <div 
+                  key={index}
+                  className="p-4 border rounded-lg flex items-start justify-between"
+                >
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span 
+                        className="px-2 py-1 text-xs font-medium rounded-full"
+                        style={{ 
+                          backgroundColor: `${role.color}15`,
+                          color: role.color
+                        }}
+                      >
+                        {role.title}
+                      </span>
+                    </div>
+                    <p className="text-gray-600 mt-1">{role.description}</p>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {role.skills.map((skill) => (
+                        <span
+                          key={skill}
+                          className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full"
+                        >
+                          {skill}
+                        </span>
+                      ))}
                     </div>
                   </div>
-                </div>
-              <span className="text-sm text-gray-500">(Optional)</span>
-            </div>
-            
-            {formData.requiredRoles.map((role, index) => (
-              <div 
-                key={index}
-                className="p-4 border rounded-lg flex items-start justify-between"
-              >
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span 
-                      className="px-2 py-1 text-xs font-medium rounded-full"
-                      style={{ 
-                        backgroundColor: `${role.color}15`,
-                        color: role.color
-                      }}
-                    >
-                      {role.title}
-                    </span>
-                  </div>
-                  <p className="text-gray-600 mt-1">{role.description}</p>
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {role.skills.map((skill) => (
-                      <span
-                        key={skill}
-                        className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full"
-                      >
-                        {skill}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleRemoveRole(index)}
-                >
-                  Remove
-                </Button>
-              </div>
-            ))}
-
-            <Card className="p-6">
-              <h3 className="text-lg font-medium mb-4">Add New Role</h3>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Role Title
-                  </label>
-                  <input
-                    type="text"
-                    value={newRole.title}
-                    onChange={(e) => setNewRole({ ...newRole, title: e.target.value })}
-                    className="w-full px-4 py-2 rounded-xl border"
-                    placeholder="e.g. Frontend Developer"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Description
-                  </label>
-                  <textarea
-                    value={newRole.description}
-                    onChange={(e) => setNewRole({ ...newRole, description: e.target.value })}
-                    className="w-full px-4 py-2 rounded-xl border"
-                    placeholder="Describe the role's responsibilities..."
-                    rows={3}
-                  />
-                </div>
-
-                <SearchableMultiSelect
-                  label="Required Skills"
-                  options={SKILLS}
-                  value={newRole.skills}
-                  onChange={(skills) => setNewRole({ ...newRole, skills })}
-                  placeholder="Select required skills for this role"
-                />
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Role Color
-                  </label>
-                  <div className="flex flex-wrap gap-2">
-                    {ROLE_COLORS.map((color) => (
-                      <button
-                        key={color.value}
-                        type="button"
-                        className={`w-8 h-8 rounded-full border-2 transition-all ${
-                          newRole.color === color.value 
-                            ? 'border-gray-900 scale-110' 
-                            : 'border-transparent hover:scale-105'
-                        }`}
-                        style={{ backgroundColor: color.value }}
-                        onClick={() => setNewRole({ ...newRole, color: color.value })}
-                        title={color.name}
-                      />
-                    ))}
-                  </div>
-                </div>
-
-                <div className="flex justify-end">
                   <Button
-                    type="button"
-                    variant="primary"
-                    onClick={handleAddRole}
-                    disabled={!newRole.title || !newRole.description}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleRemoveRole(index)}
                   >
-                    Add Role
+                    Remove
                   </Button>
                 </div>
-              </div>
-            </Card>
-          </div>
+              ))}
+
+              <Card className="p-6">
+                <h3 className="text-lg font-medium mb-4">Add New Role</h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Role Title
+                    </label>
+                    <input
+                      type="text"
+                      value={newRole.title}
+                      onChange={(e) => setNewRole({ ...newRole, title: e.target.value })}
+                      className="w-full px-4 py-2 rounded-xl border"
+                      placeholder="e.g. Frontend Developer"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Description
+                    </label>
+                    <textarea
+                      value={newRole.description}
+                      onChange={(e) => setNewRole({ ...newRole, description: e.target.value })}
+                      className="w-full px-4 py-2 rounded-xl border"
+                      placeholder="Describe the role's responsibilities..."
+                      rows={3}
+                    />
+                  </div>
+
+                  <SearchableMultiSelect
+                    label="Required Skills"
+                    options={SKILLS}
+                    value={newRole.skills}
+                    onChange={(skills) => setNewRole({ ...newRole, skills })}
+                    placeholder="Select required skills for this role"
+                  />
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Role Color
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                      {ROLE_COLORS.map((color) => (
+                        <button
+                          key={color.value}
+                          type="button"
+                          className={`w-8 h-8 rounded-full border-2 transition-all ${
+                            newRole.color === color.value 
+                              ? 'border-gray-900 scale-110' 
+                              : 'border-transparent hover:scale-105'
+                          }`}
+                          style={{ backgroundColor: color.value }}
+                          onClick={() => setNewRole({ ...newRole, color: color.value })}
+                          title={color.name}
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end">
+                    <Button
+                      type="button"
+                      variant="primary"
+                      onClick={handleAddRole}
+                      disabled={!newRole.title || !newRole.description}
+                    >
+                      Add Role
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+            </div>
           </div>
         );
 
@@ -815,7 +979,7 @@ export function CreateProject() {
   const isStepValid = () => {
     switch (currentStep) {
       case 0:
-        return formData.title && formData.shortDescription;
+        return formData.title && formData.shortDescription && formData.coverImage;
       case 1:
         return formData.problemStatement && formData.expectedOutcomes && 
                formData.targetAudience && formData.description;
@@ -829,97 +993,157 @@ export function CreateProject() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto py-8 px-4">
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Create New Project</h1>
-          <p className="mt-1 text-sm text-gray-500">Fill in the details to create your new project</p>
+    <>
+      <div className="container mx-auto px-8 py-8">
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-2xl font-semibold text-gray-900">Create New Project</h1>
+            <p className="mt-1 text-sm text-gray-500">Fill in the details to create your new project</p>
+          </div>
         </div>
-          </div>
 
-      <div className="mb-8 bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-        <div className="flex items-center justify-between relative">
-          <div className="absolute top-5 left-0 right-0 h-0.5 bg-gray-200">
-            <div 
-              className="h-full bg-primary-500 transition-all duration-300"
-              style={{ width: `${(currentStep / (STEPS.length - 1)) * 100}%` }}
-            />
-          </div>
-
-          <div className="w-full grid grid-cols-4 gap-4">
-            {STEPS.map((step, index) => (
+        <Card className="mb-8 bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <div className="flex items-center justify-between relative">
+            <div className="absolute top-5 left-0 right-0 h-0.5 bg-gray-200">
               <div 
-                key={step.id}
-                className="relative"
-              >
-                <div className="flex flex-col items-center relative">
-                  <div 
-                    className={`w-10 h-10 rounded-full flex items-center justify-center border-2 bg-white z-10 transition-all duration-300 ${
-                      index <= currentStep - 1
-                        ? 'bg-white border-primary-500 text-gray-900' 
-                        : index === currentStep 
-                          ? 'bg-white text-primary-500 border-primary-500' 
-                          : 'bg-white text-gray-400 border-gray-200'
-                    }`}
-                  >
-                    {index <= currentStep - 1 ? (
-                      <span className="text-base leading-none">✓</span>
-                    ) : (
-                      <span className="text-sm font-medium">{index + 1}</span>
-                    )}
+                className="h-full bg-primary-500 transition-all duration-300"
+                style={{ width: `${(currentStep / (STEPS.length - 1)) * 100}%` }}
+              />
+            </div>
+
+            <div className="w-full grid grid-cols-4 gap-4">
+              {STEPS.map((step, index) => (
+                <div 
+                  key={step.id}
+                  className="relative"
+                >
+                  <div className="flex flex-col items-center relative">
+                    <div 
+                      className={`w-10 h-10 rounded-full flex items-center justify-center border-2 bg-white z-10 transition-all duration-300 ${
+                        index <= currentStep - 1
+                          ? 'bg-white border-primary-500 text-gray-900' 
+                          : index === currentStep 
+                            ? 'bg-white text-primary-500 border-primary-500' 
+                            : 'bg-white text-gray-400 border-gray-200'
+                      }`}
+                    >
+                      {index <= currentStep - 1 ? (
+                        <span className="text-base leading-none">✓</span>
+                      ) : (
+                        <span className="text-sm font-medium">{index + 1}</span>
+                      )}
+                    </div>
+                    <div className="mt-3 text-sm font-medium text-center text-gray-900 whitespace-nowrap">{step.title}</div>
+                    <div className="mt-1 text-xs text-center text-gray-500 max-w-[140px] mx-auto">{step.description}</div>
                   </div>
-                  <div className="mt-3 text-sm font-medium text-center text-gray-900 whitespace-nowrap">{step.title}</div>
-                  <div className="mt-1 text-xs text-center text-gray-500 max-w-[140px] mx-auto">{step.description}</div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
+        </Card>
+
+        <Card className="p-6 shadow-sm border border-gray-200">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {renderStepContent()}
+
+            <div className="flex justify-end gap-4 pt-6 border-t border-gray-200">
+              <Button
+                variant="outline"
+                onClick={() => navigate('/app/projects')}
+                disabled={isLoading}
+              >
+                Cancel
+              </Button>
+
+              {currentStep > 0 && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setCurrentStep(currentStep - 1)}
+                >
+                  Previous
+                </Button>
+              )}
+
+              {currentStep < STEPS.length - 1 ? (
+                <Button
+                  type="button"
+                  onClick={() => isStepValid() && setCurrentStep(currentStep + 1)}
+                  disabled={!isStepValid()}
+                >
+                  Next
+                </Button>
+              ) : (
+              <Button
+                type="submit"
+                loading={isLoading}
+                  disabled={!isStepValid()}
+              >
+                Create Project
+              </Button>
+              )}
+            </div>
+          </form>
+        </Card>
       </div>
 
-      <Card className="p-8 shadow-sm border border-gray-100">
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {renderStepContent()}
+      {/* Preview Modal */}
+      <AnimatePresence>
+        {showPreview && (
+          <Dialog
+            as={motion.div}
+            static
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            open={showPreview}
+            onClose={() => setShowPreview(false)}
+            className="fixed inset-0 z-50 overflow-y-auto"
+          >
+            <div className="flex items-center justify-center min-h-screen px-4">
+              <Dialog.Overlay 
+                as={motion.div}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 bg-black/30" 
+              />
 
-          <div className="flex justify-end gap-4 pt-6 border-t">
-            <Button
-              variant="outline"
-              onClick={() => navigate('/app/projects')}
-              disabled={isLoading}
-            >
-              Cancel
-            </Button>
-
-            {currentStep > 0 && (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setCurrentStep(currentStep - 1)}
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="relative bg-white rounded-xl shadow-lg max-w-2xl w-full mx-auto p-8"
               >
-                Previous
-              </Button>
-            )}
+                <Dialog.Title className="text-2xl font-semibold text-gray-900 mb-6">
+                  Preview Your Project
+                </Dialog.Title>
 
-            {currentStep < STEPS.length - 1 ? (
-              <Button
-                type="button"
-                onClick={() => isStepValid() && setCurrentStep(currentStep + 1)}
-                disabled={!isStepValid()}
-              >
-                Next
-              </Button>
-            ) : (
-            <Button
-              type="submit"
-              loading={isLoading}
-                disabled={!isStepValid()}
-            >
-              Create Project
-            </Button>
-            )}
-          </div>
-        </form>
-      </Card>
-    </div>
+                <div className="mb-8">
+                  <ProjectCard project={previewProject} />
+                </div>
+
+                <div className="flex items-center justify-end gap-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowPreview(false)}
+                    disabled={isLoading}
+                  >
+                    Back to Edit
+                  </Button>
+                  <Button
+                    variant="primary"
+                    onClick={handleConfirmSubmit}
+                    loading={isLoading}
+                  >
+                    Create Project
+                  </Button>
+                </div>
+              </motion.div>
+            </div>
+          </Dialog>
+        )}
+      </AnimatePresence>
+    </>
   );
 }

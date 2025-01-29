@@ -5,7 +5,7 @@ import { AuthRedirect } from './components/auth/AuthRedirect';
 import HomePage from './pages/index';
 import AboutPage from './pages/about/index';
 import BlogPage from './pages/blog/index';
-import CareersPage from './pages/careers/index';
+import PartnershipPage from './pages/partnership/index';
 import ContactPage from './pages/contact/index';
 import AccessPage from './pages/access/index';
 import AuthPage from './pages/auth/index';
@@ -13,12 +13,13 @@ import ProfilePage from './pages/profile/index';
 import AppLayout from './pages/app/index';
 import { UserProfile } from './pages/app/pages/UserProfile';
 import { Analytics } from '@vercel/analytics/react';
+import { ToastProvider } from './components/ui/toast';
 
 console.log('App rendering');
 
 export default function App() {
   return (
-    <>
+    <ToastProvider>
       <ScrollToTop />
       <Routes>
         {/* Public routes with auth redirect */}
@@ -29,7 +30,7 @@ export default function App() {
         } />
         <Route path="/about" element={<AboutPage />} />
         <Route path="/blog" element={<BlogPage />} />
-        <Route path="/careers" element={<CareersPage />} />
+        <Route path="/partnership" element={<PartnershipPage />} />
         <Route path="/contact" element={<ContactPage />} />
         <Route path="/access" element={<AccessPage />} />
         <Route path="/auth" element={
@@ -53,6 +54,6 @@ export default function App() {
         } />
       </Routes>
       <Analytics />
-    </>
+    </ToastProvider>
   );
 }

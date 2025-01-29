@@ -9,6 +9,9 @@ import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firesto
 import { db } from '../../../../config/firebase';
 import type { User } from '../../../../types/user';
 import type { Project } from '../../../../types/project';
+import { motion } from 'framer-motion';
+import { FiMail, FiGlobe, FiClock, FiBriefcase, FiAward } from 'react-icons/fi';
+import { Link } from 'react-router-dom';
 
 export function Profile() {
   const [isEditing, setIsEditing] = useState(false);
@@ -23,26 +26,65 @@ export function Profile() {
 
       try {
         console.log('Fetching projects for user:', user.uid);
-        // Fetch all projects (owned and joined)
-        const [ownedSnapshot, joinedSnapshot] = await Promise.all([
-          getDocs(query(collection(db, 'projects'), where('owner.id', '==', user.uid))),
-          getDocs(query(collection(db, 'projects'), where('members', 'array-contains', { id: user.uid })))
-        ]);
+        // Fetch all projects
+        const projectsSnapshot = await getDocs(collection(db, 'projects'));
+        const allProjects = projectsSnapshot.docs.map(doc => {
+          const data = doc.data();
+          const owner = data.owner || {};
+          
+          return {
+            id: doc.id,
+            ...data,
+            owner: {
+              id: owner.id,
+              name: owner.fullName || owner.name || '',
+              avatar: owner.avatar || owner.profileImage || null
+            }
+          };
+        }) as Project[];
 
-        const ownedProjects = ownedSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as Project[];
-
-        const joinedProjects = joinedSnapshot.docs
-          .map(doc => ({ id: doc.id, ...doc.data() })) as Project[];
-
-        // Combine and remove duplicates
-        const allProjects = [...ownedProjects, ...joinedProjects.filter(project => project.owner.id !== user.uid)];
-        const uniqueProjects = Array.from(new Map(allProjects.map(project => [project.id, project])).values());
+        // Get unique owner IDs
+        const ownerIds = [...new Set(allProjects.map(p => p.owner.id))];
         
-        console.log('Projects loaded:', uniqueProjects.length);
-        setOwnedProjects(uniqueProjects);
+        // Fetch all owners data in parallel
+        const ownersData = await Promise.all(
+          ownerIds.map(id => getDoc(doc(db, 'users', id)))
+        );
+        
+        // Create owners map
+        const ownersMap = new Map(
+          ownersData
+            .filter(doc => doc.exists())
+            .map(doc => {
+              const data = doc.data();
+              return [
+                doc.id, 
+                {
+                  id: doc.id,
+                  name: data.fullName,
+                  avatar: data.avatar || data.profileImage
+                }
+              ];
+            })
+        );
+
+        // Update projects with owner data
+        const projectsWithOwners = allProjects.map(project => ({
+          ...project,
+          owner: ownersMap.get(project.owner.id) || project.owner
+        }));
+
+        // Separate owned and joined projects
+        const owned = projectsWithOwners.filter(project => project.owner.id === user.uid);
+        const joined = projectsWithOwners.filter(project => 
+          project.owner.id !== user.uid && 
+          project.members?.some(member => member.id === user.uid)
+        );
+
+        setOwnedProjects(owned);
+        setJoinedProjects(joined);
+        
+        console.log('Projects loaded:', owned.length + joined.length);
       } catch (error) {
         console.error('Error fetching projects:', error);
       }
@@ -65,7 +107,13 @@ export function Profile() {
     return (
       <div className="max-w-3xl mx-auto">
         <Card className="p-8 text-center">
-          <div className="text-4xl mb-4">😢</div>
+          <motion.div 
+            initial={{ scale: 0.5 }}
+            animate={{ scale: 1 }}
+            className="text-4xl mb-4"
+          >
+            😢
+          </motion.div>
           <h3 className="text-lg font-medium text-gray-900 mb-2">Profile not found</h3>
           <p className="text-gray-600">
             Your profile is not available or has been removed
@@ -76,88 +124,104 @@ export function Profile() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-4 sm:py-8">
-      <Card className="overflow-hidden">
-        {/* Header */}
-        <div className="p-4 sm:p-8 pb-4 sm:pb-6 border-b border-gray-100">
-          <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-8">
-            <div 
-              className="relative group cursor-pointer" 
-              onClick={() => setIsEditingPicture(true)}
-            >
-              <div className="w-24 h-24 sm:w-32 sm:h-32">
-                {userProfile.avatar || userProfile.profileImage ? (
-                  <img
-                    src={userProfile.avatar || userProfile.profileImage}
-                    alt={userProfile.fullName}
-                    className="w-full h-full rounded-full object-cover ring-4 ring-gray-50"
-                  />
-                ) : (
-                  <div 
-                    className="w-full h-full rounded-full flex items-center justify-center text-2xl sm:text-3xl ring-4 ring-gray-50"
-                    style={{ backgroundColor: userProfile.profileColor || '#f3f4f6' }}
-                  >
-                    {userProfile.profileEmoji || userProfile.fullName.charAt(0).toUpperCase()}
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="px-8 py-8"
+    >
+      <Card className="overflow-hidden bg-white border border-gray-200">
+        {/* Header with gradient overlay */}
+        <div className="relative">
+          <div className="absolute inset-0 bg-gradient-to-r from-blue-50 to-purple-50 opacity-30"></div>
+          <div className="relative px-10 py-10 border-b border-gray-200">
+            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-8">
+              <motion.div 
+                whileHover={{ scale: 1.05 }}
+                className="relative group cursor-pointer" 
+                onClick={() => setIsEditingPicture(true)}
+              >
+                <div className="w-24 h-24 sm:w-32 sm:h-32 transition-transform duration-300 ease-in-out">
+                  {userProfile.avatar || userProfile.profileImage ? (
+                    <img
+                      src={userProfile.avatar || userProfile.profileImage}
+                      alt={userProfile.fullName}
+                      className="w-full h-full rounded-full object-cover ring-4 ring-white border border-gray-200"
+                    />
+                  ) : (
+                    <div 
+                      className="w-full h-full rounded-full flex items-center justify-center text-2xl sm:text-3xl ring-4 ring-white border border-gray-200"
+                      style={{ backgroundColor: userProfile.profileColor || '#f3f4f6' }}
+                    >
+                      {userProfile.profileEmoji || userProfile.fullName.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <div className="absolute inset-0 bg-black/30 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
+                    <span className="text-white text-xs sm:text-sm font-medium">Change Photo</span>
                   </div>
-                )}
-                <div className="absolute inset-0 bg-black/20 rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                  <span className="text-white text-xs sm:text-sm font-medium">Change Photo</span>
                 </div>
-              </div>
-            </div>
-            <div className="flex-1 min-w-0 text-center sm:text-left">
-              <div className="flex flex-col sm:flex-row justify-between items-center sm:items-start gap-4">
-                <div>
-                  <h1 className="text-xl sm:text-2xl font-semibold mb-2">{userProfile.fullName}</h1>
-                  <p className="text-base sm:text-lg text-gray-600 mb-4">{userProfile.professionalTitle}</p>
-                  <div className="flex flex-wrap justify-center sm:justify-start items-center gap-3 sm:gap-6">
-                    {userProfile.country && (
-                      <div className="flex items-center gap-2">
-                        <CountryDisplay country={userProfile.country} />
-                      </div>
-                    )}
-                    {userProfile.experienceLevel && (
-                      <div className="flex items-center gap-2 text-gray-600">
-                        <span className="w-1.5 h-1.5 rounded-full bg-gray-400"></span>
-                        <span className="text-sm">
-                          {userProfile.experienceLevel} experience
+              </motion.div>
+
+              <div className="flex-1 min-w-0 text-center sm:text-left">
+                <div className="flex flex-col sm:flex-row justify-between items-center sm:items-start gap-6">
+                  <div>
+                    <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 mb-3">
+                      {userProfile.fullName}
+                    </h1>
+                    <p className="text-base sm:text-lg text-gray-600 mb-5">{userProfile.professionalTitle}</p>
+                    <div className="flex flex-wrap justify-center sm:justify-start items-center gap-4">
+                      {userProfile.country && (
+                        <span className="text-sm text-gray-500">
+                          <CountryDisplay country={userProfile.country} />
                         </span>
-                      </div>
-                    )}
+                      )}
+                      {userProfile.experienceLevel && (
+                        <span className="text-sm text-gray-500">
+                          {userProfile.experienceLevel}
+                        </span>
+                      )}
+                    </div>
                   </div>
+                  <Button
+                    variant={isEditing ? 'outline' : 'primary'}
+                    onClick={() => setIsEditing(!isEditing)}
+                    className="flex-shrink-0 w-full sm:w-auto"
+                  >
+                    {isEditing ? 'Cancel' : 'Edit Profile'}
+                  </Button>
                 </div>
-                <Button
-                  variant={isEditing ? 'outline' : 'primary'}
-                  onClick={() => setIsEditing(!isEditing)}
-                  className="flex-shrink-0 w-full sm:w-auto"
-                >
-                  {isEditing ? 'Cancel' : 'Edit Profile'}
-                </Button>
               </div>
             </div>
           </div>
         </div>
 
         {isEditing ? (
-          <div className="p-4 sm:p-8">
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="px-10 py-12"
+          >
             <ProfileForm 
               onCancel={() => setIsEditing(false)}
               onSuccess={handleEditSuccess}
             />
-          </div>
+          </motion.div>
         ) : (
-          <div className="p-4 sm:p-8 space-y-6 sm:space-y-8">
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="px-10 py-12 space-y-12"
+          >
             {/* Basic Information */}
             <div>
-              <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3 sm:mb-4">Basic Information</h3>
-              <Card className="p-4 sm:p-6 space-y-4 sm:space-y-6 bg-gray-50/50">
+              <h3 className="text-sm font-medium text-gray-700 mb-6">Basic information</h3>
+              <Card className="p-8 space-y-8 border border-gray-200">
                 {userProfile.bio && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Bio</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-3">Bio</label>
                     <div className="text-sm sm:text-base text-gray-600 leading-relaxed">{userProfile.bio}</div>
                   </div>
                 )}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
                   {userProfile.yearsOfExperience && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">Experience</label>
@@ -176,19 +240,20 @@ export function Profile() {
 
             {/* Skills & Preferences */}
             <div>
-              <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3 sm:mb-4">Skills & Preferences</h3>
-              <Card className="p-4 sm:p-6 space-y-4 sm:space-y-6 bg-gray-50/50">
+              <h3 className="text-sm font-medium text-gray-700 mb-6">Skills & preferences</h3>
+              <Card className="p-8 space-y-8 border border-gray-200">
                 {userProfile.skills && userProfile.skills.length > 0 && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2 sm:mb-3">Skills</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-4">Skills</label>
                     <div className="flex flex-wrap gap-2">
                       {userProfile.skills.map((skill: string) => (
-                        <span
+                        <motion.span
                           key={skill}
-                          className="px-2 sm:px-3 py-1 sm:py-1.5 bg-white shadow-sm border border-gray-200 rounded-full text-xs sm:text-sm font-medium text-gray-700"
+                          whileHover={{ scale: 1.05 }}
+                          className="px-3 py-1.5 bg-blue-50 border border-blue-200 text-blue-700 rounded-full text-sm font-medium"
                         >
                           {skill}
-                        </span>
+                        </motion.span>
                       ))}
                     </div>
                   </div>
@@ -196,15 +261,16 @@ export function Profile() {
 
                 {userProfile.projectPreferences && userProfile.projectPreferences.length > 0 && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2 sm:mb-3">Project Preferences</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-4">Project preferences</label>
                     <div className="flex flex-wrap gap-2">
                       {userProfile.projectPreferences.map((pref: string) => (
-                        <span
+                        <motion.span
                           key={pref}
-                          className="px-2 sm:px-3 py-1 sm:py-1.5 bg-blue-50 border border-blue-100 text-blue-700 rounded-full text-xs sm:text-sm font-medium"
+                          whileHover={{ scale: 1.05 }}
+                          className="px-3 py-1.5 bg-purple-50 border border-purple-200 text-purple-700 rounded-full text-sm font-medium"
                         >
                           {pref}
-                        </span>
+                        </motion.span>
                       ))}
                     </div>
                   </div>
@@ -212,15 +278,16 @@ export function Profile() {
 
                 {userProfile.languages && userProfile.languages.length > 0 && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2 sm:mb-3">Languages</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-4">Languages</label>
                     <div className="flex flex-wrap gap-2">
                       {userProfile.languages.map((lang: string) => (
-                        <span
+                        <motion.span
                           key={lang}
-                          className="px-2 sm:px-3 py-1 sm:py-1.5 bg-purple-50 border border-purple-100 text-purple-700 rounded-full text-xs sm:text-sm font-medium"
+                          whileHover={{ scale: 1.05 }}
+                          className="px-3 py-1.5 bg-green-50 border border-green-200 text-green-700 rounded-full text-sm font-medium"
                         >
                           {lang}
-                        </span>
+                        </motion.span>
                       ))}
                     </div>
                   </div>
@@ -228,15 +295,16 @@ export function Profile() {
 
                 {userProfile.collaborationPreferences && userProfile.collaborationPreferences.length > 0 && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2 sm:mb-3">Collaboration Style</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-4">Collaboration style</label>
                     <div className="flex flex-wrap gap-2">
                       {userProfile.collaborationPreferences.map((style: string) => (
-                        <span
+                        <motion.span
                           key={style}
-                          className="px-2 sm:px-3 py-1 sm:py-1.5 bg-green-50 border border-green-100 text-green-700 rounded-full text-xs sm:text-sm font-medium"
+                          whileHover={{ scale: 1.05 }}
+                          className="px-3 py-1.5 bg-amber-50 border border-amber-200 text-amber-700 rounded-full text-sm font-medium"
                         >
                           {style}
-                        </span>
+                        </motion.span>
                       ))}
                     </div>
                   </div>
@@ -246,26 +314,19 @@ export function Profile() {
 
             {/* Additional Information */}
             <div>
-              <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3 sm:mb-4">Additional Information</h3>
-              <Card className="p-4 sm:p-6 space-y-4 sm:space-y-6 bg-gray-50/50">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-                  {userProfile.country && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Location</label>
-                      <CountryDisplay country={userProfile.country} />
-                    </div>
-                  )}
-
+              <h3 className="text-sm font-medium text-gray-700 mb-6">Additional information</h3>
+              <Card className="p-8 border border-gray-200">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
                   {userProfile.weeklyAvailability && (
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Weekly Availability</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Weekly availability</label>
                       <div className="text-sm sm:text-base text-gray-600">{userProfile.weeklyAvailability} hours/week</div>
                     </div>
                   )}
 
                   {userProfile.createdAt && (
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Member Since</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Member since</label>
                       <div className="text-sm sm:text-base text-gray-600">
                         {new Date(userProfile.createdAt).toLocaleDateString('en-US', {
                           year: 'numeric',
@@ -278,13 +339,291 @@ export function Profile() {
                 </div>
               </Card>
             </div>
-          </div>
+
+            {/* Portfolio Projects */}
+            <div>
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-sm font-medium text-gray-700">Portfolio projects</h3>
+                <Button
+                  variant="outline"
+                  onClick={() => window.location.href = '/app/projects/create'}
+                  className="text-sm"
+                >
+                  Create project
+                </Button>
+              </div>
+
+              <Card className="divide-y divide-gray-200 border border-gray-200">
+                {/* Projects Stats */}
+                <div className="px-8 py-6">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <div>
+                      <p className="text-sm text-gray-500 mb-1">Total projects</p>
+                      <p className="text-2xl font-semibold text-gray-900">{ownedProjects.length + joinedProjects.length}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500 mb-1">Created</p>
+                      <p className="text-2xl font-semibold text-gray-900">{ownedProjects.filter(p => p.owner.id === user?.uid).length}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500 mb-1">Joined</p>
+                      <p className="text-2xl font-semibold text-gray-900">{joinedProjects.length}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500 mb-1">Active</p>
+                      <p className="text-2xl font-semibold text-gray-900">
+                        {ownedProjects.filter(p => p.status === 'active').length + joinedProjects.filter(p => p.status === 'active').length}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Projects List */}
+                <div className="px-8 py-6">
+                  {ownedProjects.length > 0 || joinedProjects.length > 0 ? (
+                    <div className="space-y-8">
+                      {/* Created Projects */}
+                      {ownedProjects.filter(p => p.owner.id === user?.uid).length > 0 && (
+                        <div>
+                          <h4 className="text-sm font-medium text-gray-900 mb-4">Projects you created</h4>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            {ownedProjects
+                              .filter(p => p.owner.id === user?.uid)
+                              .map((project) => (
+                                <Link 
+                                  key={project.id}
+                                  to={`/app/projects/${project.id}`}
+                                >
+                                  <Card className="group border border-gray-200 hover:border-gray-300 transition-all h-full">
+                                    <div className="p-6 flex flex-col h-full">
+                                      {/* Project Metadata */}
+                                      <div className="flex flex-wrap items-center gap-2 mb-6">
+                                        {/* Status Chip */}
+                                        {project.status === 'open' && (
+                                          <span className="inline-flex items-center px-2.5 py-1 bg-green-50 border border-green-100 text-green-600 rounded-full text-xs font-medium">
+                                            Open for Contributors
+                                          </span>
+                                        )}
+                                        {/* Category Chip */}
+                                        <span className="inline-flex items-center px-2.5 py-1 bg-blue-50 border border-blue-100 text-blue-600 rounded-full text-xs font-medium capitalize">
+                                          {project.category}
+                                        </span>
+                                        {/* Phase Chip */}
+                                        <span className="inline-flex items-center px-2.5 py-1 bg-purple-50 border border-purple-100 text-purple-600 rounded-full text-xs font-medium capitalize">
+                                          {project.phase}
+                                        </span>
+                                      </div>
+
+                                      {/* Main Content */}
+                                      <div className="flex gap-5 mb-6">
+                                        {/* Project Image */}
+                                        <div className="shrink-0">
+                                          {project.coverImage ? (
+                                            <div className="w-20 h-20 rounded-lg overflow-hidden bg-gray-100 ring-2 ring-gray-100">
+                                              <img
+                                                src={project.coverImage}
+                                                alt={project.title}
+                                                className="w-full h-full object-cover"
+                                              />
+                                            </div>
+                                          ) : (
+                                            <div className="w-20 h-20 rounded-lg bg-gradient-to-br from-gray-100 to-gray-200 ring-2 ring-gray-100 flex items-center justify-center">
+                                              <span className="text-3xl">🎯</span>
+                                            </div>
+                                          )}
+                                        </div>
+
+                                        {/* Project Info */}
+                                        <div className="flex-1 min-w-0">
+                                          <h4 className="text-lg font-semibold text-gray-900 mb-2 truncate group-hover:text-primary-600 transition-colors">
+                                            {project.title}
+                                          </h4>
+                                          <p className="text-sm text-gray-600 line-clamp-2 leading-relaxed">
+                                            {project.shortDescription || project.description}
+                                          </p>
+                                        </div>
+                                      </div>
+
+                                      {/* Skills Section */}
+                                      {project.skills && project.skills.length > 0 && (
+                                        <div className="flex flex-wrap gap-2 mb-6">
+                                          {project.skills.slice(0, 5).map((skill) => (
+                                            <span
+                                              key={skill}
+                                              className="inline-flex items-center px-2.5 py-1 bg-gray-50 border border-gray-200 text-gray-600 rounded-full text-xs font-medium"
+                                            >
+                                              {skill}
+                                            </span>
+                                          ))}
+                                          {project.skills.length > 5 && (
+                                            <span className="inline-flex items-center px-2.5 py-1 bg-gray-50 border border-gray-200 text-gray-400 rounded-full text-xs font-medium">
+                                              +{project.skills.length - 5}
+                                            </span>
+                                          )}
+                                        </div>
+                                      )}
+
+                                      {/* Owner Info */}
+                                      <div className="flex items-center justify-between border-t border-gray-100 pt-4 mt-auto">
+                                        <div className="flex items-center gap-2 min-w-0">
+                                          {project.owner?.avatar || project.owner?.profileImage ? (
+                                            <img
+                                              src={project.owner.avatar || project.owner.profileImage}
+                                              alt={project.owner.name}
+                                              className="w-6 h-6 rounded-full object-cover flex-shrink-0 ring-2 ring-gray-100"
+                                            />
+                                          ) : (
+                                            <div className="w-6 h-6 rounded-full bg-gradient-to-br from-primary-100 to-primary-200 flex items-center justify-center flex-shrink-0 ring-2 ring-gray-100">
+                                              <span className="text-xs font-medium text-primary-700">
+                                                {(project.owner?.name || 'U').charAt(0).toUpperCase()}
+                                              </span>
+                                            </div>
+                                          )}
+                                          <span className="text-sm font-medium text-gray-700 truncate">{project.owner?.name}</span>
+                                        </div>
+                                        <div className="flex items-center gap-2 text-sm text-gray-500">
+                                          <span className="font-medium">{project.members?.length || 0} members</span>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </Card>
+                                </Link>
+                              ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Joined Projects */}
+                      {joinedProjects.length > 0 && (
+                        <div>
+                          <h4 className="text-sm font-medium text-gray-900 mb-4">Projects you joined</h4>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            {joinedProjects.map((project) => (
+                                <Link 
+                                  key={project.id}
+                                  to={`/app/projects/${project.id}`}
+                                >
+                                  <Card className="group border border-gray-200 hover:border-gray-300 transition-all h-full">
+                                    <div className="p-6 flex flex-col h-full">
+                                      {/* Project Metadata */}
+                                      <div className="flex flex-wrap items-center gap-2 mb-6">
+                                        {/* Status Chip */}
+                                        {project.status === 'open' && (
+                                          <span className="inline-flex items-center px-2.5 py-1 bg-green-50 border border-green-100 text-green-600 rounded-full text-xs font-medium">
+                                            Open for Contributors
+                                          </span>
+                                        )}
+                                        {/* Category Chip */}
+                                        <span className="inline-flex items-center px-2.5 py-1 bg-blue-50 border border-blue-100 text-blue-600 rounded-full text-xs font-medium capitalize">
+                                          {project.category}
+                                        </span>
+                                        {/* Phase Chip */}
+                                        <span className="inline-flex items-center px-2.5 py-1 bg-purple-50 border border-purple-100 text-purple-600 rounded-full text-xs font-medium capitalize">
+                                          {project.phase}
+                                        </span>
+                                      </div>
+
+                                      {/* Main Content */}
+                                      <div className="flex gap-5 mb-6">
+                                        {/* Project Image */}
+                                        <div className="shrink-0">
+                                          {project.coverImage ? (
+                                            <div className="w-20 h-20 rounded-lg overflow-hidden bg-gray-100 ring-2 ring-gray-100">
+                                              <img
+                                                src={project.coverImage}
+                                                alt={project.title}
+                                                className="w-full h-full object-cover"
+                                              />
+                                            </div>
+                                          ) : (
+                                            <div className="w-20 h-20 rounded-lg bg-gradient-to-br from-gray-100 to-gray-200 ring-2 ring-gray-100 flex items-center justify-center">
+                                              <span className="text-3xl">🎯</span>
+                                            </div>
+                                          )}
+                                        </div>
+
+                                        {/* Project Info */}
+                                        <div className="flex-1 min-w-0">
+                                          <h4 className="text-lg font-semibold text-gray-900 mb-2 truncate group-hover:text-primary-600 transition-colors">
+                                            {project.title}
+                                          </h4>
+                                          <p className="text-sm text-gray-600 line-clamp-2 leading-relaxed">
+                                            {project.shortDescription || project.description}
+                                          </p>
+                                        </div>
+                                      </div>
+
+                                      {/* Skills Section */}
+                                      {project.skills && project.skills.length > 0 && (
+                                        <div className="flex flex-wrap gap-2 mb-6">
+                                          {project.skills.slice(0, 5).map((skill) => (
+                                            <span
+                                              key={skill}
+                                              className="inline-flex items-center px-2.5 py-1 bg-gray-50 border border-gray-200 text-gray-600 rounded-full text-xs font-medium"
+                                            >
+                                              {skill}
+                                            </span>
+                                          ))}
+                                          {project.skills.length > 5 && (
+                                            <span className="inline-flex items-center px-2.5 py-1 bg-gray-50 border border-gray-200 text-gray-400 rounded-full text-xs font-medium">
+                                              +{project.skills.length - 5}
+                                            </span>
+                                          )}
+                                        </div>
+                                      )}
+
+                                      {/* Owner Info */}
+                                      <div className="flex items-center justify-between border-t border-gray-100 pt-4 mt-auto">
+                                        <div className="flex items-center gap-2 min-w-0">
+                                          {project.owner?.avatar || project.owner?.profileImage ? (
+                                            <img
+                                              src={project.owner.avatar || project.owner.profileImage}
+                                              alt={project.owner.name}
+                                              className="w-6 h-6 rounded-full object-cover flex-shrink-0 ring-2 ring-gray-100"
+                                            />
+                                          ) : (
+                                            <div className="w-6 h-6 rounded-full bg-gradient-to-br from-primary-100 to-primary-200 flex items-center justify-center flex-shrink-0 ring-2 ring-gray-100">
+                                              <span className="text-xs font-medium text-primary-700">
+                                                {(project.owner?.name || 'U').charAt(0).toUpperCase()}
+                                              </span>
+                                            </div>
+                                          )}
+                                          <span className="text-sm font-medium text-gray-700 truncate">{project.owner?.name}</span>
+                                        </div>
+                                        <div className="flex items-center gap-2 text-sm text-gray-500">
+                                          <span className="font-medium">{project.members?.length || 0} members</span>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </Card>
+                                </Link>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <p className="text-sm text-gray-500 mb-4">No projects yet</p>
+                      <Button
+                        variant="outline"
+                        onClick={() => window.location.href = '/app/projects/create'}
+                        className="inline-flex items-center"
+                      >
+                        Create your first project
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </Card>
+            </div>
+          </motion.div>
         )}
       </Card>
 
       {isEditingPicture && (
         <ProfilePictureModal onClose={handlePictureModalClose} />
       )}
-    </div>
+    </motion.div>
   );
 }

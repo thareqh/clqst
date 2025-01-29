@@ -4,25 +4,26 @@ import { db, storage } from '../config/firebase';
 import type { FileItem, Folder } from '../types/file';
 
 // Folder Management
-export async function createFolder(folderData: Omit<Folder, 'id'>): Promise<Folder> {
+export async function createFolder(projectId: string, path: string, name: string, user: { id: string; name: string; avatar?: string }): Promise<Folder> {
   try {
-    // Hapus avatar jika undefined
-    const createdBy = {
-      id: folderData.createdBy.id,
-      name: folderData.createdBy.name,
-      ...(folderData.createdBy.avatar ? { avatar: folderData.createdBy.avatar } : {})
-    };
-
-    const cleanFolderData = {
-      ...folderData,
-      createdBy
+    const folderData = {
+      projectId,
+      name,
+      path,
+      createdAt: new Date().toISOString(),
+      createdBy: {
+        id: user.id,
+        name: user.name,
+        ...(user.avatar ? { avatar: user.avatar } : {})
+      },
+      isSystemFolder: false
     };
 
     // Create folder document with custom ID based on path
-    const folderId = `${folderData.projectId}_${folderData.path.replace(/\//g, '_')}_${folderData.name}`;
-    await setDoc(doc(db, `folders/${folderData.projectId}/items`, folderId), cleanFolderData);
+    const folderId = `${projectId}_${path.replace(/\//g, '_')}_${name}`;
+    await setDoc(doc(db, `folders/${projectId}/items`, folderId), folderData);
     
-    return { id: folderId, ...cleanFolderData };
+    return { id: folderId, ...folderData };
   } catch (error) {
     console.error('Error creating folder:', error);
     throw error;
@@ -230,14 +231,7 @@ export async function addFileFromDiscussion(
     const discussionsFolder = folders.find(f => f.name === 'discussions');
     if (!discussionsFolder) {
       console.log('Creating discussions folder...');
-      await createFolder({
-        name: 'discussions',
-        path: '/',
-        createdAt: new Date().toISOString(),
-        createdBy,
-        projectId,
-        isSystemFolder: true
-      });
+      await createFolder(projectId, '/', 'discussions', { id: userId, name: userName, avatar: userAvatar });
     }
 
     // Save file with the correct path and source
@@ -295,14 +289,7 @@ export async function addFileFromChat(
     const chatsFolder = folders.find(f => f.name === 'chats');
     if (!chatsFolder) {
       console.log('Creating chats folder...');
-      await createFolder({
-        name: 'chats',
-        path: '/',
-        createdAt: new Date().toISOString(),
-        createdBy,
-        projectId,
-        isSystemFolder: true
-      });
+      await createFolder(projectId, '/', 'chats', { id: userId, name: userName, avatar: userAvatar });
     }
 
     // Save file with the correct path and source
@@ -376,13 +363,7 @@ export async function createSystemFolders(projectId: string, userId: string, use
     if (foldersToCreate.length > 0) {
       await Promise.all(
         foldersToCreate.map(folder =>
-          createFolder({
-            name: folder.name,
-            path: folder.path,
-            createdAt: Timestamp.now().toDate().toISOString(),
-            createdBy,
-            projectId
-          })
+          createFolder(projectId, folder.path, folder.name, createdBy)
         )
       );
     }

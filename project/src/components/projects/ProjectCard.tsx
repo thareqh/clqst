@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Card } from '../ui/Card';
 import { ProjectStatus } from './ProjectStatus';
-import { ProjectSkills } from './ProjectSkills';
 import type { Project } from '../../types/project';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../config/firebase';
@@ -16,7 +15,6 @@ interface ProjectCardProps {
 export function ProjectCard({ project }: ProjectCardProps) {
   const { user } = useAuth();
   const [ownerData, setOwnerData] = useState(project?.owner || null);
-  const [userRole, setUserRole] = useState<string | null>(null);
 
   // Fetch latest owner data
   useEffect(() => {
@@ -41,116 +39,98 @@ export function ProjectCard({ project }: ProjectCardProps) {
     fetchOwnerData();
   }, [project?.owner?.id]);
 
-  // Determine user role in project
-  useEffect(() => {
-    if (!user) return;
-
-    if (project.owner?.id === user.uid) {
-      setUserRole('Owner');
-    } else {
-      const member = project.members?.find(m => m.id === user.uid);
-      if (member?.role) {
-        setUserRole(member.role);
-      }
-    }
-  }, [project, user]);
-
   if (!project) return null;
 
   return (
     <Link to={`/app/projects/${project.id}`}>
-      <Card className="group hover:shadow-lg transition-all h-full flex flex-col overflow-hidden">
-        {/* Project Cover Image */}
-        <div className="relative w-full pt-[56.25%] bg-gray-100">
-          {project.coverImage ? (
-            <img
-              src={project.coverImage}
-              alt={project.title}
-              className="absolute inset-0 w-full h-full object-cover"
-            />
-          ) : (
-            <div className="absolute inset-0 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
-              <span className="text-4xl">🎯</span>
-            </div>
-          )}
-          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/30" />
-          
-          {/* Status Badge */}
-          <div className="absolute top-4 right-4">
-            <ProjectStatus status={project.status} />
-          </div>
-        </div>
-
-        {/* Content */}
-        <div className="flex-1 p-6">
-          <div className="flex items-center justify-between gap-4 mb-3">
-            <motion.h3 
-              className="text-xl font-medium group-hover:text-gray-600 transition-colors"
-              whileHover={{ x: 4 }}
-            >
-              {project.title}
-            </motion.h3>
-
-            {/* Role Chip */}
-            {userRole && (
-              <span className={`
-                px-2.5 py-1 text-xs font-medium rounded-full
-                ${userRole === 'Owner' 
-                  ? 'bg-primary-50 text-primary-600' 
-                  : 'bg-gray-50 text-gray-600'}
-              `}>
-                {userRole}
+      <Card className="group border border-gray-200 hover:border-gray-300 transition-all h-full">
+        <div className="p-6 flex flex-col h-full">
+          {/* Project Metadata */}
+          <div className="flex flex-wrap items-center gap-2 mb-6">
+            {/* Status Chip */}
+            {project.status === 'open' && (
+              <span className="inline-flex items-center px-2.5 py-1 bg-green-50 border border-green-100 text-green-600 rounded-full text-xs font-medium">
+                Open for Contributors
               </span>
             )}
+            {/* Category Chip */}
+            <span className="inline-flex items-center px-2.5 py-1 bg-blue-50 border border-blue-100 text-blue-600 rounded-full text-xs font-medium capitalize">
+              {project.category}
+            </span>
+            {/* Phase Chip */}
+            <span className="inline-flex items-center px-2.5 py-1 bg-purple-50 border border-purple-100 text-purple-600 rounded-full text-xs font-medium capitalize">
+              {project.phase}
+            </span>
           </div>
-          
-          <p className="text-gray-600 mb-6 line-clamp-2">
-            {project.shortDescription}
-          </p>
 
-          <ProjectSkills skills={project.skills || []} className="mb-6" />
+          {/* Main Content */}
+          <div className="flex gap-5 mb-6">
+            {/* Project Image */}
+            <div className="shrink-0 pt-1">
+              {project.coverImage ? (
+                <div className="w-20 h-20 rounded-lg overflow-hidden bg-gray-100 ring-2 ring-gray-100">
+                  <img
+                    src={project.coverImage}
+                    alt={project.title}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              ) : (
+                <div className="w-20 h-20 rounded-lg bg-gradient-to-br from-gray-100 to-gray-200 ring-2 ring-gray-100 flex items-center justify-center">
+                  <span className="text-3xl">🎯</span>
+                </div>
+              )}
+            </div>
 
-          {/* Footer */}
-          <div className="flex items-center justify-between pt-4 mt-auto border-t border-gray-100">
-            {/* Owner Info */}
-            <div className="flex items-center gap-2">
+            {/* Project Info */}
+            <div className="flex-1 min-w-0">
+              <h4 className="text-lg font-semibold text-gray-900 mb-2 truncate group-hover:text-primary-600 transition-colors">
+                {project.title}
+              </h4>
+              <p className="text-sm text-gray-600 line-clamp-2 leading-relaxed">{project.shortDescription}</p>
+            </div>
+          </div>
+
+          {/* Skills Section */}
+          {project.skills.length > 0 && (
+            <div className="flex flex-wrap gap-2 mb-6">
+              {project.skills.slice(0, 5).map((skill) => (
+                <span
+                  key={skill}
+                  className="inline-flex items-center px-2.5 py-1 bg-gray-50 border border-gray-200 text-gray-600 rounded-full text-xs font-medium"
+                >
+                  {skill}
+                </span>
+              ))}
+              {project.skills.length > 5 && (
+                <span className="inline-flex items-center px-2.5 py-1 bg-gray-50 border border-gray-200 text-gray-400 rounded-full text-xs font-medium">
+                  +{project.skills.length - 5}
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* Owner Info */}
+          <div className="flex items-center justify-between border-t border-gray-100 pt-4 mt-auto">
+            <div className="flex items-center gap-2 min-w-0">
               {ownerData?.avatar ? (
                 <img
                   src={ownerData.avatar}
                   alt={ownerData.name}
-                  className="w-8 h-8 rounded-full object-cover"
-                  onError={(e) => {
-                    const target = e.currentTarget;
-                    target.style.display = 'none';
-                    const parent = target.parentElement;
-                    if (parent) {
-                      const div = document.createElement('div');
-                      div.className = 'w-8 h-8 rounded-full bg-gradient-to-br from-primary-100 to-primary-200 flex items-center justify-center';
-                      const span = document.createElement('span');
-                      span.className = 'text-sm text-primary-700';
-                      span.textContent = (ownerData.name || 'U').charAt(0).toUpperCase();
-                      div.appendChild(span);
-                      parent.appendChild(div);
-                    }
-                  }}
+                  className="w-6 h-6 rounded-full object-cover flex-shrink-0 ring-2 ring-gray-100"
                 />
               ) : (
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary-100 to-primary-200 flex items-center justify-center">
-                  <span className="text-sm text-primary-700">
+                <div className="w-6 h-6 rounded-full bg-gradient-to-br from-primary-100 to-primary-200 flex items-center justify-center flex-shrink-0 ring-2 ring-gray-100">
+                  <span className="text-xs font-medium text-primary-700">
                     {(ownerData?.name || 'U').charAt(0).toUpperCase()}
                   </span>
                 </div>
               )}
-              <span className="text-sm text-gray-600">{ownerData?.name || 'Unknown User'}</span>
+              <span className="text-sm font-medium text-gray-700 truncate">{ownerData?.name}</span>
             </div>
-
-            <motion.span 
-              className="text-sm font-medium text-gray-600 flex items-center gap-2 group-hover:text-gray-900"
-              whileHover={{ x: 4 }}
-            >
-              View Details
-              <span className="text-lg">→</span>
-            </motion.span>
+            <div className="flex items-center gap-2 text-sm text-gray-500">
+              <span className="font-medium">{project.members.length} members</span>
+            </div>
           </div>
         </div>
       </Card>

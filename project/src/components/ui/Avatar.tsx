@@ -1,30 +1,41 @@
-interface AvatarProps {
+import * as React from 'react';
+import * as AvatarPrimitive from '@radix-ui/react-avatar';
+import { clsx } from 'clsx';
+import { twMerge } from 'tailwind-merge';
+
+const cn = (...inputs: any[]) => {
+  return twMerge(clsx(inputs));
+};
+
+export interface AvatarProps extends React.ComponentPropsWithoutRef<typeof AvatarPrimitive.Root> {
   src?: string;
-  alt: string;
-  fallback: string;
-  size?: 'sm' | 'md' | 'lg';
+  fallback?: string;
 }
 
-export function Avatar({ src, alt, fallback, size = 'md' }: AvatarProps) {
-  const sizes = {
-    sm: 'w-6 h-6 text-xs',
-    md: 'w-8 h-8 text-sm',
-    lg: 'w-12 h-12 text-base'
-  };
+const Avatar = React.forwardRef<
+  React.ElementRef<typeof AvatarPrimitive.Root>,
+  AvatarProps
+>(({ className, src, fallback, ...props }, ref) => (
+  <AvatarPrimitive.Root
+    ref={ref}
+    className={cn(
+      'relative flex h-10 w-10 shrink-0 overflow-hidden rounded-full',
+      className
+    )}
+    {...props}
+  >
+    <AvatarPrimitive.Image
+      src={src}
+      className="h-full w-full object-cover"
+    />
+    <AvatarPrimitive.Fallback
+      className="flex h-full w-full items-center justify-center rounded-full bg-gray-100 text-gray-600"
+    >
+      {fallback}
+    </AvatarPrimitive.Fallback>
+  </AvatarPrimitive.Root>
+));
 
-  return (
-    <div className={`${sizes[size]} rounded-full bg-gray-200 flex items-center justify-center overflow-hidden`}>
-      {src ? (
-        <img
-          src={src}
-          alt={alt}
-          className="w-full h-full object-cover"
-        />
-      ) : (
-        <span className="font-medium text-gray-600">
-          {fallback}
-        </span>
-      )}
-    </div>
-  );
-}
+Avatar.displayName = 'Avatar';
+
+export { Avatar };

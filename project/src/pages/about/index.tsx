@@ -3,7 +3,7 @@ import { AboutHero } from '../../components/about/AboutHero';
 import { AboutMission } from '../../components/about/AboutMission';
 import { AboutValues } from '../../components/about/AboutValues';
 import { AboutTeam } from '../../components/about/AboutTeam';
-import { AboutTimeline } from '../../components/about/AboutTimeline';
+import { AboutJourney } from '../../components/about/AboutJourney';
 
 export default function AboutPage() {
   return (
@@ -12,7 +12,7 @@ export default function AboutPage() {
       <AboutMission />
       <AboutValues />
       <AboutTeam />
-      <AboutTimeline />
+      <AboutJourney />
     </PageLayout>
   );
 }

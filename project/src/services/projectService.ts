@@ -9,7 +9,8 @@ import {
   where, 
   orderBy, 
   limit,
-  arrayUnion
+  arrayUnion,
+  arrayRemove
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import type { Project, ProjectMember } from '../types/project';
@@ -133,3 +134,17 @@ export async function joinProject(projectId: string, member: ProjectMember) {
     throw error;
   }
 }
+
+export const addProjectImage = async (projectId: string, imageUrl: string) => {
+  const projectRef = doc(db, 'projects', projectId);
+  await updateDoc(projectRef, {
+    images: arrayUnion({ url: imageUrl })
+  });
+};
+
+export const removeProjectImage = async (projectId: string, imageUrl: string) => {
+  const projectRef = doc(db, 'projects', projectId);
+  await updateDoc(projectRef, {
+    images: arrayRemove({ url: imageUrl })
+  });
+};

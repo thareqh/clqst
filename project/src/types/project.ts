@@ -1,8 +1,22 @@
-export interface ProjectCategory {
-  id: string;
-  name: string;
-  icon: string;
-}
+export type ProjectCategory = 
+  | 'web' 
+  | 'mobile' 
+  | 'desktop'
+  | 'backend'
+  | 'api'
+  | 'ai'
+  | 'data'
+  | 'blockchain'
+  | 'game'
+  | 'iot'
+  | 'devops'
+  | 'security'
+  | 'ar_vr'
+  | 'ecommerce'
+  | 'education'
+  | 'productivity'
+  | 'social'
+  | 'other';
 
 export interface ProjectRole {
   title: string;
@@ -15,10 +29,10 @@ export interface ProjectRole {
 export interface ProjectMember {
   id: string;
   name: string;
-  avatar?: string | null;
+  avatar?: string;
   role: string;
-  joinedAt: string;
   skills: string[];
+  joinedAt: string;
 }
 
 export interface ProjectOwner {
@@ -34,29 +48,35 @@ export interface ProjectMilestone {
 }
 
 export interface Project {
-  id?: string;
+  id: string;
   title: string;
-  shortDescription: string;
   description: string;
-  category: 'web' | 'mobile' | 'desktop' | 'other';
-  phase: 'idea' | 'prototype' | 'development' | 'growth' | 'maintenance';
-  status: 'open' | 'closed' | 'completed';
-  visibility: 'public' | 'private';
-  websiteUrl?: string;
+  shortDescription: string;
+  problem: string;
+  solution: string;
   coverImage?: string;
-  problemStatement: string;
-  expectedOutcomes: string;
-  targetAudience: string;
-  projectGoals: string[];
-  requiredRoles: ProjectRole[];
+  status: 'open' | 'closed' | 'completed' | 'archived';
   skills: string[];
-  members: ProjectMember[];
   owner: {
     id: string;
     name: string;
-    avatar: string | null;
+    avatar?: string;
   };
+  members: ProjectMember[];
+  phase: 'idea' | 'prototype' | 'development' | 'growth' | 'maintenance';
+  category: 'web' | 'mobile' | 'desktop' | 'backend' | 'ai' | 'data' | 'blockchain' | 
+           'game' | 'iot' | 'robotics' | 'cloud' | 'security' | 'ar_vr' | 'network' | 
+           'embedded' | 'research' | 'education' | 'business' | 'finance' | 'healthcare' |
+           'art' | 'music' | 'photo' | 'video' | 'commerce' | 'innovation' | 'social' |
+           'creative' | 'other';
+  visibility: 'public' | 'private';
+  tags: string[];
+  requiredRoles: ProjectRole[];
   milestones: ProjectMilestone[];
+  images?: Array<{
+    url: string;
+    caption?: string;
+  }>;
   createdAt: string;
   updatedAt: string;
 }
@@ -70,16 +90,21 @@ export interface ProjectAttachment {
 export interface ProjectJoinRequest {
   id: string;
   projectId: string;
-  projectOwnerId: string;
   userId: string;
+  projectOwnerId: string;
+  status: 'pending' | 'accepted' | 'rejected';
+  message?: string;
+  createdAt: string;
+  updatedAt?: string;
   user: {
-    id: string;
     name: string;
     avatar?: string;
   };
-  role: ProjectRole | null;
-  message: string;
-  attachments: ProjectAttachment[];
-  createdAt: string;
-  status: 'pending' | 'accepted' | 'rejected';
+  role?: {
+    title: string;
+    color?: string;
+  };
+  read?: boolean;
+  readAt?: Date;
+  attachments?: ProjectAttachment[];
 }

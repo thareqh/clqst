@@ -1,47 +1,46 @@
 export const plans = [
   {
-    name: 'Free',
+    name: 'Starter',
     price: '0',
-    description: 'Perfect for small projects and teams',
+    description: 'Perfect for individuals starting their creative journey',
     features: [
-      '👥 Unlimited team members',
-      '📂 Up to 3 projects',
-      '📝 Basic task tracking',
-      '💬 Team chat & comments',
-      '🗄️ 512MB storage space',
-      '📊 5MB file size limit',
-      '📊 Basic project insights',
-      '🤝 Community support'
+      'Access to global community',
+      'Share up to 3 project ideas',
+      'Collaborate with 2 team members',
+      'Basic storage (1GB)',
+      'Group chat & discussions',
+      'Basic project templates',
+      'Community support'
     ]
   },
   {
-    name: 'Pro',
-    price: '29',
-    description: 'Advanced features for growing teams',
+    name: 'Creator',
+    price: '15',
+    description: 'Everything you need to bring your ideas to life',
     features: [
-      '✨ Everything in Free, plus:',
-      '📂 Unlimited projects',
-      '🗄️ 48GB storage space',
-      '📤 Unlimited file size',
-      '📊 Advanced project analytics',
-      '📈 Custom project dashboards',
-      '🔄 Custom project workflows',
-      '🎯 Priority support'
+      'All Starter features',
+      'Unlimited project ideas',
+      'Up to 10 team members',
+      'Enhanced storage (10GB)',
+      'Project management tools',
+      'Premium templates',
+      'Performance analytics',
+      'Priority support'
     ]
   },
   {
-    name: 'Enterprise',
+    name: 'Innovation Hub',
     price: 'Custom',
-    description: 'Ultimate control for large organizations',
+    description: 'Advanced solutions for teams and organizations',
     features: [
-      '✨ Everything in Pro, plus:',
-      '🔐️ Unlimited storage space',
-      '🔐 Advanced security controls',
-      '🔌 Custom integrations',
-      '📊 Enterprise analytics',
-      '👥 Advanced role management',
-      '🎯 Dedicated support manager',
-      '🛡️ SSO & advanced security'
+      'All Creator features',
+      'Unlimited team members',
+      'Custom storage limits',
+      'Custom API integration',
+      'Dedicated onboarding',
+      'Account manager',
+      'Enterprise security',
+      'Team training sessions'
     ]
   }
 ];
