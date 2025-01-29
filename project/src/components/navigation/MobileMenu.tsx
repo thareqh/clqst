@@ -2,6 +2,15 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { Button } from '../ui/Button';
 import { Logo } from '../Logo';
+import { 
+  Users, 
+  Handshake, 
+  EnvelopeSimple, 
+  ArrowRight,
+  X,
+  SignIn,
+  UserPlus
+} from '@phosphor-icons/react';
 
 interface MobileMenuProps {
   isOpen: boolean;
@@ -61,25 +70,48 @@ const menuItemVariants = {
   })
 };
 
-export function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
-  const menuItems = [
-    { to: '/about', label: '👥 About', delay: 0 },
-    { to: '/partnership', label: '🤝 Partnership', delay: 1 },
-    { to: '/contact', label: '✉️ Contact', delay: 2 }
-  ];
+const menuItems = [
+  { 
+    to: '/about', 
+    label: 'About',
+    icon: Users,
+    description: 'Learn about our mission and team'
+  },
+  { 
+    to: '/partnership', 
+    label: 'Partnership',
+    icon: Handshake,
+    description: 'Collaborate and grow with us'
+  },
+  { 
+    to: '/contact', 
+    label: 'Contact',
+    icon: EnvelopeSimple,
+    description: 'Get in touch with our team'
+  }
+];
 
+export function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
   return (
     <AnimatePresence>
       {isOpen && (
         <>
-          {/* Backdrop */}
+          {/* Base Blur Layer */}
           <motion.div
             variants={backdropVariants}
             initial="closed"
             animate="open"
             exit="closed"
-            className="fixed inset-0 bg-black/20 backdrop-blur-sm z-[100]"
-            onClick={onClose}
+            className="fixed inset-0 backdrop-blur-[40px] z-[98]"
+          />
+
+          {/* Tint Layer */}
+          <motion.div
+            variants={backdropVariants}
+            initial="closed"
+            animate="open"
+            exit="closed"
+            className="fixed inset-0 bg-white/50 z-[99]"
           />
 
           {/* Menu Content */}
@@ -88,90 +120,84 @@ export function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
             initial="closed"
             animate="open"
             exit="closed"
-            className="fixed top-0 left-0 right-0 z-[101] bg-white border-b border-gray-100"
+            className="fixed top-0 left-0 right-0 h-screen z-[100] bg-gradient-to-b from-white/50 to-white/30 backdrop-blur-3xl"
           >
-            <div className="flex items-center justify-between p-4">
-              <motion.div
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                transition={{ duration: 0.2 }}
-              >
-                <Logo />
-              </motion.div>
-              <motion.button
-                whileHover={{ scale: 1.1, rotate: 90 }}
-                whileTap={{ scale: 0.9 }}
-                transition={{ duration: 0.2 }}
-                onClick={onClose}
-                className="p-2 hover:bg-gray-50 rounded-full transition-colors"
-              >
-                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <motion.path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                    initial={{ pathLength: 0 }}
-                    animate={{ pathLength: 1 }}
-                    transition={{ duration: 0.5 }}
-                  />
-                </svg>
-              </motion.button>
-            </div>
-
-            <nav className="px-4 py-8">
-              <div className="space-y-6">
-                {menuItems.map((item, index) => (
+            <div className="relative backdrop-blur-lg bg-white/20">
+              <div className="max-w-7xl mx-auto">
+                {/* Header */}
+                <div className="flex items-center justify-between p-4 border-b border-white/20">
                   <motion.div
-                    key={item.to}
-                    custom={index}
-                    variants={menuItemVariants}
-                    initial="closed"
-                    animate="open"
-                    exit="closed"
-                  >
-                    <Link
-                      to={item.to}
-                      onClick={onClose}
-                      className="flex items-center gap-3 px-4 py-3 text-lg font-medium text-gray-900 hover:bg-gray-50 rounded-lg transition-colors"
-                    >
-                      <motion.span
-                        whileHover={{ scale: 1.1, rotate: [0, -10, 10, 0] }}
-                        transition={{ duration: 0.3 }}
-                      >
-                        {item.label.split(' ')[0]}
-                      </motion.span>
-                      <span>{item.label.split(' ')[1]}</span>
-                    </Link>
-                  </motion.div>
-                ))}
-
-                <motion.div
-                  variants={menuItemVariants}
-                  custom={3}
-                  initial="closed"
-                  animate="open"
-                  exit="closed"
-                  className="pt-4"
-                >
-                  <motion.div
-                    whileHover={{ scale: 1.02, y: -2 }}
+                    whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     transition={{ duration: 0.2 }}
                   >
+                    <Logo />
+                  </motion.div>
+                  <div className="flex items-center gap-2">
                     <Button
-                      variant="primary"
-                      href="https://play.google.com/store/apps/details?id=com.cliquest.me"
-                      className="w-full justify-center text-base py-3"
+                      variant="secondary"
+                      href="/signin"
+                      className="text-sm font-medium px-4 py-2 bg-white/20 hover:bg-white/30"
                       onClick={onClose}
                     >
-                      <span className="mr-2">📱</span>
-                      Get it on Play Store
+                      Sign In
                     </Button>
-                  </motion.div>
-                </motion.div>
+                    <Button
+                      variant="primary"
+                      href="/signup"
+                      className="text-sm font-medium px-4 py-2"
+                      onClick={onClose}
+                    >
+                      Sign Up
+                    </Button>
+                    <motion.button
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                      transition={{ duration: 0.2 }}
+                      onClick={onClose}
+                      className="p-2 hover:bg-white/20 rounded-xl transition-colors ml-2"
+                    >
+                      <X weight="bold" className="w-6 h-6 text-zinc-600" />
+                    </motion.button>
+                  </div>
+                </div>
+
+                {/* Navigation Links */}
+                <nav className="px-4 py-6">
+                  <div className="space-y-2.5">
+                    {menuItems.map((item, index) => (
+                      <motion.div
+                        key={item.to}
+                        custom={index}
+                        variants={menuItemVariants}
+                        initial="closed"
+                        animate="open"
+                        exit="closed"
+                      >
+                        <Link
+                          to={item.to}
+                          onClick={onClose}
+                          className="group block p-4 rounded-2xl bg-white/10 hover:bg-white/20 border border-white/20 hover:border-white/30 transition-all duration-300"
+                        >
+                          <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                              <item.icon weight="duotone" className="w-5 h-5 text-zinc-700" />
+                            </div>
+                            <div className="flex-1">
+                              <div className="flex items-center justify-between">
+                                <span className="text-base font-medium text-zinc-900">{item.label}</span>
+                                <ArrowRight className="w-4 h-4 text-zinc-400 group-hover:translate-x-1 transition-transform duration-300" />
+                              </div>
+                              <p className="text-sm text-zinc-500 mt-0.5">{item.description}</p>
+                            </div>
+                          </div>
+                        </Link>
+                      </motion.div>
+                    ))}
+                  </div>
+                </nav>
               </div>
-            </nav>
+            </div>
           </motion.div>
         </>
       )}
